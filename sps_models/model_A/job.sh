@@ -1,4 +1,5 @@
-#/bin/bash -l
+#!/bin/bash -l
+
 #SBATCH -J model_A_training_set
 #SBATCH -t 12:00:00
 #SBATCH -p cops
