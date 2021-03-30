@@ -6,7 +6,8 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=64
 
-ml openmpi3
+ml unload openmpi3
+ml conda mpich
 
-mpirun -np 64 python3 generate_spectra_mpi.py
-mpirun -np 64 python3 add_nebular_emission_mpi.py
+mpiexec -np 64 python3 generate_spectra_mpi.py '/cfs/home/alju5794/steppz/sps_models/model_A/training_data'
+mpiexec -np 64 python3 add_nebular_emission_mpi.py '/cfs/home/alju5794/steppz/sps_models/model_A/training_data'

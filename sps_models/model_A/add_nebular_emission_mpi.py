@@ -1,5 +1,5 @@
 import os
-os.environ["SPS_HOME"] = '/cfs/home/alju5794/software/fsps'
+os.environ["SPS_HOME"] = '/cfs/home/alju5794/software/python-fsps/src/fsps/libfsps'
 import fsps
 from astropy.cosmology import Planck15
 import numpy as np
