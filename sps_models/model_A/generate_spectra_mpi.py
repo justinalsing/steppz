@@ -6,6 +6,7 @@ import numpy as np
 from sedpy.observate import load_filters, getSED
 import sys
 from sfh import *
+import time
 
 # mpi set-up
 from mpi4py import MPI
@@ -87,6 +88,7 @@ np.save(root_directory + 'spectra/wave.npy', wave)
 spectra = np.zeros((n_samples, len(wave)))
 
 # loop over sets
+start = time.time()
 for k in sets:
 
     # load in the parameters
@@ -128,3 +130,6 @@ for k in sets:
 
     # save to disc
     np.save(root_directory + 'spectra/spectra' + str(k) + '.npy', spectra)
+
+total_time = time.time() - start
+np.savetxt(root_directory + 'timing_benchmark.txt', np.array([total_time]))
