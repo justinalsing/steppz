@@ -120,7 +120,7 @@ for k in sets:
 
         # chalk em up
         spectra[i,:] = spec0
-        stellar_masses[i] = model.stellar_mass[-1]
+        stellar_masses[i] = model.stellar_mass
 
     # save to disc
     np.save(root_directory + 'spectra/spectra' + str(k) + '.npy', spectra)
