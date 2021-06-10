@@ -7,8 +7,10 @@ def sfh(tuniv, tau, alpha, beta, Z, nsteps=200):
     # time-grid
     t = np.concatenate([tuniv * (1. - np.logspace(-3, -1e-10, nsteps))[::-1], np.array([tuniv])])
 
-    # compute sfr and normalize it
-    sfr = 1./((t/tau[i])**alpha[i] + (tau[i]/t)**beta[i])
+    # SFH
+    logsfr = -np.log((t/tau[i])**alpha[i] + (tau[i]/t)**beta[i])
+    logsfr = logsfr - max(logsfr)
+    sfr = np.exp(logsfr)
     sfr = sfr/np.trapz(x=t, y=sfr)
 
     # compute the metallicity history based on the integral of the SFH
