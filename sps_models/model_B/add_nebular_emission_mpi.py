@@ -56,7 +56,7 @@ model.params['nebemlineinspec'] = False
 model.params['add_dust_emission'] = False
 
 # initialize the model by making a single call
-z, log10Z, dust2, dust_index, log10alpha, log10beta, tau = list(theta[0,:])
+log10M, log10Z, dust2, dust1_fraction, dust_index, log10alpha, log10beta, tau, z = list(theta[0,:])
 tuniv = Planck15.age(z).value
 Z = (10**log10Z)*0.0142
 t, sfr, zh = sfh(tuniv, tau, 10**log10alpha, 10**log10beta, Z, nsteps=1000)
@@ -64,6 +64,7 @@ t, sfr, zh = sfh(tuniv, tau, 10**log10alpha, 10**log10beta, Z, nsteps=1000)
 # set parameters
 model.params['zred'] = z
 model.params['dust2'] = dust2
+model.params['dust1'] = dust2*dust1_fraction
 model.params['dust_index'] = dust_index
 model.params['logzsol'] = log10Z
 model.set_tabular_sfh(t, sfr)
@@ -71,7 +72,6 @@ model.set_tabular_sfh(t, sfr)
 # set the conditional parameters
 model.params['gas_logu'] = np.clip(np.log10(sfr[-1]*0.82 + 1e-30)*0.3125 + 0.9982, -4.0, -1.0) # Kaasinin+18
 model.params['gas_logz'] = log10Z # set to the final metalicity
-model.params['dust1'] = dust2
 
 # compute rest-frame spectrum
 wave, spec = model.get_spectrum(tage = tuniv)
@@ -82,8 +82,9 @@ np.save(root_directory + 'spectra/wave.npy', wave)
 # loop over sets
 for k in sets:
 
-    # load in the parameters
+    # load in the parameters and stellar masses
     theta = np.load(root_directory + 'parameters/parameters' + str(k) + '.npy')
+    stellar_masses = np.load(root_directory + 'spectra/stellar_masses' + str(k) + '.npy')
 
     # holder for photometry
     photometry = np.zeros((n_samples, len(filters)))
@@ -95,7 +96,7 @@ for k in sets:
     for i in range(theta.shape[0]):
 
         # set parameters
-        z, log10Z, dust2, dust_index, log10alpha, log10beta, tau = list(theta[i,:])
+        log10M, log10Z, dust2, dust1_fraction, dust_index, log10alpha, log10beta, tau, z = list(theta[i,:])
         tuniv = Planck15.age(z).value
         Z = (10**log10Z)*0.0142
         t, sfr, zh = sfh(tuniv, tau, 10**log10alpha, 10**log10beta, Z, nsteps=1000)
@@ -108,6 +109,7 @@ for k in sets:
         # set parameters
         model.params['zred'] = z
         model.params['dust2'] = dust2
+        model.params['dust1'] = dust2*dust1_fraction
         model.params['dust_index'] = dust_index
         model.params['logzsol'] = log10Z
         model.set_tabular_sfh(t, sfr)
@@ -115,7 +117,6 @@ for k in sets:
         # set the conditional parameters
         model.params['gas_logu'] = np.clip(np.log10(sfr[-1]*0.82 + 1e-30)*0.3125 + 0.9982, -4.0, -1.0) # Kaasinin+18
         model.params['gas_logz'] = log10Z # set to the final metalicity
-        model.params['dust1'] = dust2
 
         # compute rest-frame spectrum
         wave0, spec0 = model.get_spectrum(tage = tuniv)
@@ -131,6 +132,7 @@ for k in sets:
         # set parameters
         model.params['zred'] = z
         model.params['dust2'] = dust2
+        model.params['dust1'] = dust2*dust1_fraction
         model.params['dust_index'] = dust_index
         model.params['logzsol'] = log10Z
         model.set_tabular_sfh(t, sfr)
@@ -138,7 +140,6 @@ for k in sets:
         # set the conditional parameters
         model.params['gas_logu'] = np.clip(np.log10(sfr[-1]*0.82 + 1e-30)*0.3125 + 0.9982, -4.0, -1.0) # Kaasinin+18
         model.params['gas_logz'] = log10Z # set to the final metalicity
-        model.params['dust1'] = dust2
 
         # compute rest-frame spectrum
         wave0, spec0_ = model.get_spectrum(tage = tuniv)
@@ -153,7 +154,7 @@ for k in sets:
         M = getSED(wave, lightspeed/wave**2 * spec * to_cgs_at_10pc, filters)
 
         # chalk em up
-        photometry[i,:] = M
+        photometry[i,:] = M + 2.5*np.log10(stellar_masses[i]) # stellar mass correction
 
     # save to disc...
     np.save(root_directory + 'spectra/spectra' + str(k) + '.npy', spectra)
