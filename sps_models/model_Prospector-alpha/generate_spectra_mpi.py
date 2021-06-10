@@ -109,6 +109,6 @@ for k in sets:
 
     # save to disc
     np.save(root_directory + 'parameters/parameters' + str(k) + '.npy', spectra)
-    np.save(root_directory + 'spectra/KV_photometry' + str(k) + '.npy', training_absmags[:,0:9])
-    np.save(root_directory + 'spectra/COSMOS15_photometry' + str(k) + '.npy', training_absmags[:,9:])
+    np.save(root_directory + 'photometry/KV_photometry' + str(k) + '.npy', training_absmags[:,0:9])
+    np.save(root_directory + 'photometry/COSMOS15_photometry' + str(k) + '.npy', training_absmags[:,9:])
 
