@@ -2,7 +2,7 @@
 
 #SBATCH -J train_Pa_KV
 #SBATCH -t 12:00:00
-#SBATCH -a cops
+#SBATCH -A cops
 #SBATCH -p ampere
 #SBATCH -N 1
 #SBATCH -n 1
