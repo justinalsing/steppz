@@ -2,11 +2,13 @@
 
 #SBATCH -J train_B_KV
 #SBATCH -t 12:00:00
-#SBATCH -p cops
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=64
+#SBATCH -a cops
+#SBATCH -p ampere
+#SBATCH -N 1
+#SBATCH -n 1
+#SBATCH --gres=gpu:1
 
-ml unload conda/02
+ml unload conda/02 cuda
 source ~/.local-co/bin/setup-environment.sh
 
 ulimit -s unlimited  # Unlimited stack
