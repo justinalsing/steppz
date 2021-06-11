@@ -362,7 +362,7 @@ class MassMet(priors.Prior):
 
     prior_params = ['mass_mini', 'mass_maxi', 'z_mini', 'z_maxi']
     distribution = truncnorm
-    massmet = np.loadtxt('sps_models/gallazzi_05_massmet.txt')
+    massmet = np.loadtxt('/cfs/home/alju5794/steppz/sps_models/model_Prospector-alpha/gallazzi_05_massmet.txt')
 
     def __len__(self):
         """ Hack to work with Prospector 0.3
