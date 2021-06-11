@@ -1,3 +1,4 @@
+import sys
 import fsps
 from astropy.cosmology import WMAP9
 import matplotlib as mpl
@@ -19,23 +20,26 @@ size = comm.Get_size()
 import prospector_alpha_params as pfile
 
 def prior():
-    
     mm = pfile.MassMet(z_mini=-1.98, z_maxi=0.19, mass_mini=7, mass_maxi=12.5)
     massmet = mm.sample()
     log10M = massmet[0]
     log10Z = massmet[1]
-    
+
     nbins_sfh=7-1, 
     sigma=0.3, 
     df=2,
     logsfr = priors.StudentT(mean=np.zeros(nbins_sfh),
                              scale=np.ones(nbins_sfh)*sigma,
                              df=np.ones(nbins_sfh)*df)
-    logsfr_ratios = logsfr.sample()
-    
+    success = False
+    while success is False:
+        logsfr_ratios = logsfr.sample()
+        if ~np.any(np.abs(logsfr_ratios) > 5.):
+            success = True
+
     #dust2 = pfile.model_params[2]['prior'].sample()
     dust2 = np.random.uniform(0, 2, size=1)**2
-    
+
     dust_index = pfile.model_params[3]['prior'].sample()
     dust1_fraction = pfile.model_params[4]['prior'].sample()
     fagn = pfile.model_params[5]['prior'].sample()
@@ -43,7 +47,7 @@ def prior():
     gas_logz = pfile.model_params[7]['prior'].sample()
     z = np.random.uniform(0., 2.5, size=1)
 
-    return np.concatenate([log10M, log10Z, logsfr_ratios, dust2, dust_index, dust1_fraction, fagn, agn_tau, gas_logz, z])
+    return np.concatenate([np.array([log10M, log10Z]), logsfr_ratios, dust2, dust_index, dust1_fraction, fagn, agn_tau, gas_logz, z])
 
 def generate_magnitudes(theta, sps, obs):
     
