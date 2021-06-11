@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 #SBATCH -J model_Prospector_training_set
-#SBATCH -t 12:00:00
+#SBATCH -t 6:00:00
 #SBATCH -p cops
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=64
