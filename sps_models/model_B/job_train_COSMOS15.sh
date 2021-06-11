@@ -13,4 +13,4 @@ ulimit -s unlimited  # Unlimited stack
 ulimit -u 16000      # Increase max number of tasks
 ulimit -n 65536      # Increase max number of open files
 
-python3 train_emulator_COSMOS15.py
+python3 train_emulator_COSMOS15.py '/cfs/home/alju5794/steppz/sps_models/model_B/'
