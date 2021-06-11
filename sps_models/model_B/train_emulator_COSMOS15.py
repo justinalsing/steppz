@@ -10,7 +10,7 @@ root_dir = sys.argv[1]
 
 # import the mags and thetas
 training_theta = np.row_stack([np.load(root_dir + 'training_data/parameters/parameters{}.npy'.format(_))[:,1:] for _ in range(64)]).astype(np.float32)
-training_mag = np.row_stack([np.load(root_dir + 'training_data/photometry/photometry{}.npy'.format(_))[:,9:] for _ in range(64)]).astype(np.float32)
+training_mag = np.row_stack([np.load(root_dir + 'training_data/photometry/COSMOS15_photometry{}.npy'.format(_)) for _ in range(64)]).astype(np.float32)
 
 # re-parameterization
 training_theta[:,1] = np.sqrt(training_theta[:,1]) # dust2 -> sqrt(dust2)

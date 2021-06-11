@@ -8,7 +8,8 @@ def sfh(tuniv, tau, alpha, beta, Z, nsteps=200):
     t = np.concatenate([tuniv * (1. - np.logspace(-3, -1e-10, nsteps))[::-1], np.array([tuniv])])
 
     # SFH
-    logsfr = -np.log((t/tau)**alpha + (tau/t)**beta)
+    #logsfr = -np.log((t/tau)**alpha + (tau/t)**beta)
+    Ãlogsfr = -np.logaddexp(alpha*np.log(t/tau), beta*np.log(tau/t))
     logsfr = logsfr - max(logsfr)
     sfr = np.exp(logsfr)
     sfr = sfr/np.trapz(x=t, y=sfr)

@@ -36,7 +36,14 @@ sets = range(sets_per_rank * rank, sets_per_rank * rank + sets_per_rank) # which
 # load the filters
 kids_filters = ['omegacam_' + n for n in ['u','g','r','i']]
 viking_filters = ['VISTA_' + n for n in ['Z','Y','J','H','Ks']]
-filters = load_filters(kids_filters + viking_filters)
+cosmos15_filters = ['ip_cosmos', 'v_cosmos', 'uvista_y_cosmos', 'r_cosmos', 'hsc_y',
+       'zpp', 'b_cosmos', 'uvista_h_cosmos', 'wircam_H', 'ia484_cosmos',
+       'ia527_cosmos', 'ia624_cosmos', 'ia679_cosmos', 'ia738_cosmos',
+       'ia767_cosmos', 'ia427_cosmos', 'ia464_cosmos', 'ia505_cosmos',
+       'ia574_cosmos', 'ia709_cosmos', 'ia827_cosmos', 'uvista_j_cosmos',
+       'uvista_ks_cosmos', 'wircam_Ks', 'NB711.SuprimeCam',
+       'NB816.SuprimeCam']
+filters = load_filters(kids_filters + viking_filters + cosmos15_filters)
 
 # set up the SPS model
 model = fsps.StellarPopulation(zcontinuous=1, compute_vega_mags=False)
@@ -158,4 +165,5 @@ for k in sets:
 
     # save to disc...
     np.save(root_directory + 'spectra/spectra' + str(k) + '.npy', spectra)
-    np.save(root_directory + 'photometry/photometry' + str(k) + '.npy', photometry)
+    np.save(root_directory + 'photometry/KV_photometry' + str(k) + '.npy', photometry[:,0:9])
+    np.save(root_directory + 'photometry/COSMOS15_photometry' + str(k) + '.npy', photometry[:,9:])
