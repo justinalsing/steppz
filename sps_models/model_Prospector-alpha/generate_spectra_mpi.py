@@ -18,6 +18,10 @@ size = comm.Get_size()
 
 # import the prospector model parameters file
 import prospector_alpha_params as pfile
+# load models
+obs = pfile.load_obs(**pfile.run_params)
+sps = pfile.load_sps(**pfile.run_params)
+mod = pfile.load_model(**pfile.run_params)
 
 def prior():
     mm = pfile.MassMet(z_mini=-1.98, z_maxi=0.19, mass_mini=7, mass_maxi=12.5)
@@ -82,6 +86,7 @@ cosmos15_filters = ['ip_cosmos', 'v_cosmos', 'uvista_y_cosmos', 'r_cosmos', 'hsc
        'uvista_ks_cosmos', 'wircam_Ks', 'NB711.SuprimeCam',
        'NB816.SuprimeCam']
 filters = load_filters(kids_filters + viking_filters + cosmos15_filters)
+obs['filters'] = filters
 
 # loop over sets
 for k in sets:
