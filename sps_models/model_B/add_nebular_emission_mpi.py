@@ -62,6 +62,12 @@ model.params['nebemlineinspec'] = False
 # turn off dust emission (only needed for IR)
 model.params['add_dust_emission'] = False
 
+# velocity smoothing
+model.params['smooth_velocity'] = True
+model.params['sigma_smooth'] = 150
+model.params['min_wave_smooth'] = 9e2
+model.params['max_wave_smooth'] = 1e5
+
 # initialize the model by making a single call
 log10M, log10Z, dust2, dust1_fraction, dust_index, log10alpha, log10beta, tau, z = list(theta[0,:])
 tuniv = Planck15.age(z).value

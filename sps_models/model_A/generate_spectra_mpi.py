@@ -40,7 +40,7 @@ viking_filters = ['VISTA_' + n for n in ['Z','Y','J','H','Ks']]
 filters = load_filters(kids_filters + viking_filters)
 
 # set up the SPS model
-model = fsps.StellarPopulation(zcontinuous=3, compute_vega_mags=False)
+model = fsps.StellarPopulation(zcontinuous=1, compute_vega_mags=False)
 
 # set up parameters
 model.params['sfh'] = 3 # tabular sfh
@@ -55,6 +55,12 @@ model.params['nebemlineinspec'] = False
 
 # turn off dust emission (only needed for IR)
 model.params['add_dust_emission'] = False
+
+# velocity smoothing
+model.params['smooth_velocity'] = True
+model.params['sigma_smooth'] = 150
+model.params['min_wave_smooth'] = 9e2
+model.params['max_wave_smooth'] = 1e5
 
 # initialize the model by making a single call
 z, log10Z, dust2, dust_index, f_sf_start, lntau, f_sf_trunc, phi = list(theta[0,:])
