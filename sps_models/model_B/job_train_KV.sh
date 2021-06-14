@@ -1,14 +1,14 @@
 #!/bin/bash -l
 
 #SBATCH -J train_B_KV
-#SBATCH -t 12:00:00
+#SBATCH -t 24:00:00
 #SBATCH -A cops
 #SBATCH -p ampere
 #SBATCH -N 1
 #SBATCH -n 1
 #SBATCH --gres=gpu:1
 
-ml unload conda/02 cuda
+ml unload conda/02
 source ~/.local-co/bin/setup-environment.sh
 
 ulimit -s unlimited  # Unlimited stack

@@ -117,7 +117,7 @@ for k in sets:
     training_absmags = np.array(training_absmags)
 
     # save to disc
-    np.save(root_directory + 'parameters/parameters' + str(k) + '.npy', spectra)
+    np.save(root_directory + 'parameters/parameters' + str(k) + '.npy', training_theta)
     np.save(root_directory + 'photometry/KV_photometry' + str(k) + '.npy', training_absmags[:,0:9])
     np.save(root_directory + 'photometry/COSMOS15_photometry' + str(k) + '.npy', training_absmags[:,9:])
 

@@ -8,7 +8,8 @@
 #SBATCH -n 1
 #SBATCH --gres=gpu:1
 
-ml unload conda/02 cuda
+ml unload conda/02
+ml cuda
 source ~/.local-co/bin/setup-environment.sh
 
 ulimit -s unlimited  # Unlimited stack

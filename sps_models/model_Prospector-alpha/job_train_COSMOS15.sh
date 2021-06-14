@@ -1,14 +1,15 @@
 #!/bin/bash -l
 
 #SBATCH -J train_Pa_COSMOS15
-#SBATCH -t 32:00:00
+#SBATCH -t 48:00:00
 #SBATCH -A cops
 #SBATCH -p ampere
 #SBATCH -N 1
 #SBATCH -n 1
 #SBATCH --gres=gpu:1
 
-ml unload conda/02 cuda
+ml unload conda/02
+ml cuda
 source ~/.local-co/bin/setup-environment.sh
 
 ulimit -s unlimited  # Unlimited stack

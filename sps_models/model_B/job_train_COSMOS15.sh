@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 #SBATCH -J train_B_COSMOS15
-#SBATCH -t 32:00:00
+#SBATCH -t 80:00:00
 #SBATCH -A cops
 #SBATCH -p ampere
 #SBATCH -N 1

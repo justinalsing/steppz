@@ -35,6 +35,7 @@ filters = ['ip_cosmos', 'v_cosmos', 'uvista_y_cosmos', 'r_cosmos', 'hsc_y',
        'ia574_cosmos', 'ia709_cosmos', 'ia827_cosmos', 'uvista_j_cosmos',
        'uvista_ks_cosmos', 'wircam_Ks', 'NB711.SuprimeCam',
        'NB816.SuprimeCam']
+select = 11
 
 # training set up
 validation_split = 0.1
@@ -52,12 +53,12 @@ n_units = 128
 
 # do the training
 train_photulator_stack(training_theta, 
-                       training_mag, 
+                       training_mag[:,select:], 
                        parameters_shift, 
                        parameters_scale, 
-                       magnitudes_shift, 
-                       magnitudes_scale,
-                       filters=filters,
+                       magnitudes_shift[select:], 
+                       magnitudes_scale[select:],
+                       filters=filters[select:],
                        n_layers=n_layers,
                        n_units=n_units,
                        validation_split=validation_split,
