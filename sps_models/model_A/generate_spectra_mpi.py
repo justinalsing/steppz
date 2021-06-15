@@ -37,7 +37,14 @@ to_cgs_at_10pc = lsun / (4.0 * np.pi * (pc*10)**2) # L_sun/AA to erg/s/cm^2/AA a
 # load the filters
 kids_filters = ['omegacam_' + n for n in ['u','g','r','i']]
 viking_filters = ['VISTA_' + n for n in ['Z','Y','J','H','Ks']]
-filters = load_filters(kids_filters + viking_filters)
+cosmos15_filters = ['ip_cosmos', 'v_cosmos', 'uvista_y_cosmos', 'r_cosmos', 'hsc_y',
+       'zpp', 'b_cosmos', 'uvista_h_cosmos', 'wircam_H', 'ia484_cosmos',
+       'ia527_cosmos', 'ia624_cosmos', 'ia679_cosmos', 'ia738_cosmos',
+       'ia767_cosmos', 'ia427_cosmos', 'ia464_cosmos', 'ia505_cosmos',
+       'ia574_cosmos', 'ia709_cosmos', 'ia827_cosmos', 'uvista_j_cosmos',
+       'uvista_ks_cosmos', 'wircam_Ks', 'NB711.SuprimeCam',
+       'NB816.SuprimeCam']
+filters = load_filters(kids_filters + viking_filters + cosmos15_filters)
 
 # set up the SPS model
 model = fsps.StellarPopulation(zcontinuous=1, compute_vega_mags=False)
@@ -49,12 +56,12 @@ model.params['dust_type'] = 4 # Calzetti with power law modification
 model.params['pmetals'] = -99
 
 # turn off neublar emission
-model.params['add_neb_emission'] = False
-model.params['add_neb_continuum'] = False
-model.params['nebemlineinspec'] = False
+model.params['add_neb_emission'] = True
+model.params['add_neb_continuum'] = True
+model.params['nebemlineinspec'] = True
 
 # turn off dust emission (only needed for IR)
-model.params['add_dust_emission'] = False
+model.params['add_dust_emission'] = True
 
 # velocity smoothing
 model.params['smooth_velocity'] = True
@@ -63,26 +70,22 @@ model.params['min_wave_smooth'] = 9e2
 model.params['max_wave_smooth'] = 1e5
 
 # initialize the model by making a single call
-z, log10Z, dust2, dust_index, f_sf_start, lntau, f_sf_trunc, phi = list(theta[0,:])
+log10M, log10Z, dust2, dust1_fraction, dust_index, log10alpha, log10beta, tau, z = list(theta[0,:])
 tuniv = Planck15.age(z).value
-sf_start = tuniv * f_sf_start
-sf_trunc = tuniv * f_sf_trunc + sf_start
-sf_slope = np.tan(phi)
-tage = tuniv - sf_start
 Z = (10**log10Z)*0.0142
-tau = np.exp(lntau)
-t, sfr, zh = sfh(tuniv, sf_start, tau, sf_trunc, sf_slope, Z, nsteps=300)
+t, sfr, zh = sfh(tuniv, tau, 10**log10alpha, 10**log10beta, Z, nsteps=1000)
 
 # set parameters
 model.params['zred'] = z
 model.params['dust2'] = dust2
+model.params['dust1'] = dust2*dust1_fraction
 model.params['dust_index'] = dust_index
-model.set_tabular_sfh(t, sfr, Z=zh)
+model.params['logzsol'] = log10Z
+model.set_tabular_sfh(t, sfr)
 
 # set the conditional parameters
 model.params['gas_logu'] = np.clip(np.log10(sfr[-1]*0.82 + 1e-30)*0.3125 + 0.9982, -4.0, -1.0) # Kaasinin+18
 model.params['gas_logz'] = log10Z # set to the final metalicity
-model.params['dust1'] = dust2
 
 # compute rest-frame spectrum
 wave, spec = model.get_spectrum(tage = tuniv)
@@ -90,52 +93,47 @@ wave, spec = model.get_spectrum(tage = tuniv)
 # save the wave vector to file
 np.save(root_directory + 'spectra/wave.npy', wave)
 
-# holders for model spectra
-spectra = np.zeros((n_samples, len(wave)))
-
-# loop over sets
-start = time.time()
 for k in sets:
 
     # load in the parameters
     theta = np.load(root_directory + 'parameters/parameters' + str(k) + '.npy')
 
-    # holders for model spectra
-    spectra = np.zeros((n_samples, len(wave)))
+    # holder for photometry
+    photometry = np.zeros((n_samples, len(filters)))
 
     # now loop over the training parameters
     for i in range(n_samples):
 
         # set parameters
-        z, log10Z, dust2, dust_index, f_sf_start, lntau, f_sf_trunc, phi = list(theta[i,:])
+        log10M, log10Z, dust2, dust1_fraction, dust_index, log10alpha, log10beta, tau, z = list(theta[i,:])
         tuniv = Planck15.age(z).value
-        sf_start = tuniv * f_sf_start
-        tage = tuniv - sf_start
-        sf_trunc = tage * f_sf_trunc + sf_start
-        sf_slope= np.tan(phi)
-        tau = np.exp(lntau)
         Z = (10**log10Z)*0.0142
-        t, sfr, zh = sfh(tuniv, sf_start, tau, sf_trunc, sf_slope, Z, nsteps=300)
+        t, sfr, zh = sfh(tuniv, tau, 10**log10alpha, 10**log10beta, Z, nsteps=1000)
 
         # set parameters
         model.params['zred'] = z
         model.params['dust2'] = dust2
+        model.params['dust1'] = dust2*dust1_fraction
         model.params['dust_index'] = dust_index
-        model.set_tabular_sfh(t, sfr, Z=zh)
+        model.params['logzsol'] = log10Z
+        model.set_tabular_sfh(t, sfr)
 
         # set the conditional parameters
         model.params['gas_logu'] = np.clip(np.log10(sfr[-1]*0.82 + 1e-30)*0.3125 + 0.9982, -4.0, -1.0) # Kaasinin+18
         model.params['gas_logz'] = log10Z # set to the final metalicity
-        model.params['dust1'] = dust2
 
         # compute rest-frame spectrum
         wave0, spec0 = model.get_spectrum(tage = tuniv)
 
+        # redshifted spectrum (and wavelength grid)
+        wave, spec = wave0*(1. + z), spec0*(1. + z)
+
+        # absolute magnitudes
+        M = getSED(wave, lightspeed/wave**2 * spec * to_cgs_at_10pc, filters)
+
         # chalk em up
-        spectra[i,:] = spec0
+        photometry[i,:] = M + 2.5*np.log10(model.stellar_mass) # stellar mass correction
 
     # save to disc
-    np.save(root_directory + 'spectra/spectra' + str(k) + '.npy', spectra)
-
-total_time = time.time() - start
-np.savetxt(root_directory + 'timing_benchmark.txt', np.array([total_time]))
+    np.save(root_directory + 'photometry/KV_photometry' + str(k) + '.npy', photometry[:,0:9])
+    np.save(root_directory + 'photometry/COSMOS15_photometry' + str(k) + '.npy', photometry[:,9:])
