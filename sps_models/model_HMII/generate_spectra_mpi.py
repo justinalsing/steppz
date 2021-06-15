@@ -75,10 +75,11 @@ for k in sets:
         z, M, log10Z, dust2, tau, tmax, dust_index = np.split(theta, len(theta))
 
         # compute magnitudes
-        mags = np.log10(model.mean_model(theta, sps=sps, obs=obs)[1])/(-0.4)
-        
+        spec, maggies, mfrac = model.mean_model(theta, sps=sps, obs=obs)           
+        mags = np.log10(maggies)/(-0.4)
+
         # adjust to unit mass absolute magnitudes
-        absmags = mags - WMAP9.distmod(z).value + 2.5*np.log10(M)
+        absmags = mags - WMAP9.distmod(z).value + 2.5*np.log10(M*mfrac)
         
         training_theta.append(np.array([np.log10(M), log10Z, dust2, tau, tmax, dust_index, z]))
         training_mags.append(mags)
