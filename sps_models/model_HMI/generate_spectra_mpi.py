@@ -26,7 +26,7 @@ spectrum, maggies, _ = model.mean_model(model.theta, sps=sps, obs=obs)
 # prior
 def prior():
     
-    z = np.random.uniform(1e-5, 2.0)
+    z = np.random.uniform(1e-5, 2.5)
     M = 10**np.random.uniform(6, 13)
     lnZ = np.random.uniform(-1.98, 0.19)
     dust2 = np.random.uniform(0, 2)**2
@@ -35,17 +35,6 @@ def prior():
     #dust_index = np.random.uniform(-1, 0.4)
 
     return np.array([z, M, lnZ, dust2, tau, tmax])
-
-def generate_magnitudes(theta, sps, obs):
-    
-    pfile.run_params['zred'] = theta[-1]
-    mod = pfile.load_model(**pfile.run_params)
-    mod.params['zred'] = theta[-1]
-    
-    # Generate spectrum
-    spec, ma, sm = mod.mean_model(theta[0:-1], sps=sps, obs=obs)
-    
-    return ma
 
 # pull in arguments from command line
 root_directory = sys.argv[1]
@@ -83,10 +72,10 @@ for k in sets:
 
         # sample prior
         theta = prior()
-        z, M, log10Z, dust2, tau, tmax, dust_index = np.split(theta, len(theta))
+        z, M, log10Z, dust2, tau, tmax = np.split(theta, len(theta))
 
         # compute magnitudes
-        mags = np.log10(generate_magnitudes(theta, sps, obs))/(-0.4)
+        mags = np.log10(model.mean_model(theta, sps=sps, obs=obs)[1])/(-0.4)
         
         # adjust to unit mass absolute magnitudes
         absmags = mags - WMAP9.distmod(z).value + 2.5*np.log10(M)
