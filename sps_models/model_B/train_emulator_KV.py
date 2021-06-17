@@ -27,6 +27,7 @@ training_mag = tf.convert_to_tensor(training_mag)
 
 # filter names
 filters = ['omegacam_' + n for n in ['u','g','r','i']] + ['VISTA_' + n for n in ['Z','Y','J','H','Ks']]
+select = 6
 
 # training set up
 validation_split = 0.1
@@ -44,12 +45,12 @@ n_units = 128
 
 # do the training
 train_photulator_stack(training_theta, 
-                       training_mag, 
+                       training_mag[:,select:], 
                        parameters_shift, 
                        parameters_scale, 
-                       magnitudes_shift, 
-                       magnitudes_scale,
-                       filters=filters,
+                       magnitudes_shift[select:], 
+                       magnitudes_scale[select:],
+                       filters=filters[select:],
                        n_layers=n_layers,
                        n_units=n_units,
                        validation_split=validation_split,

@@ -9,8 +9,8 @@ from speculator import *
 root_dir = sys.argv[1]
 
 # import the mags and thetas
-training_theta = np.row_stack([np.load(root_dir + 'training_data/parameters/parameters{}.npy'.format(_))[:,1:] for _ in range(64)]).astype(np.float32)
-training_mag = np.row_stack([np.load(root_dir + 'training_data/photometry/KV_photometry{}.npy'.format(_)) for _ in range(64)]).astype(np.float32)
+training_theta = np.row_stack([np.load(root_dir + 'training_data/parameters/parameters{}.npy'.format(_))[:,1:] for _ in range(32)]).astype(np.float32)
+training_mag = np.row_stack([np.load(root_dir + 'training_data/photometry/KV_photometry{}.npy'.format(_)) for _ in range(32)]).astype(np.float32)
 
 # re-parameterization
 training_theta[:,2] = np.sqrt(training_theta[:,2]) # dust2 -> sqrt(dust2)
