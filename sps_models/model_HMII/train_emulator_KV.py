@@ -13,9 +13,7 @@ training_theta = np.row_stack([np.load(root_dir + 'training_data/parameters/para
 training_mag = np.row_stack([np.load(root_dir + 'training_data/photometry/KV_photometry{}.npy'.format(_)) for _ in range(32)]).astype(np.float32)
 
 # re-parameterization
-training_theta[:,2] = np.sqrt(training_theta[:,2]) # dust2 -> sqrt(dust2)
-training_theta[:,3] = np.log(training_theta[:,3]) # tau log
-training_theta[:,4] = np.log(training_theta[:,4]) # tmax log
+training_theta[:,1] = np.sqrt(training_theta[:,1]) # dust2 -> sqrt(dust2)
 
 # parameters shift and scale
 parameters_shift = np.mean(training_theta, axis=0)

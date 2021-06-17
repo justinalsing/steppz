@@ -63,7 +63,7 @@ obs['filters'] = filters
 # loop over sets
 for k in sets:
 
-    training_theta = []
+    training_theta = np.zeros((n_samples, 6))
     training_mags = []
     training_absmags = []
 
@@ -81,12 +81,11 @@ for k in sets:
         # adjust to unit mass absolute magnitudes
         absmags = mags - WMAP9.distmod(z).value + 2.5*np.log10(M*mfrac)
         
-        training_theta.append(np.array([np.log10(M), log10Z, dust2, tau, tmax, z]))
+        training_theta[i,:] = np.array([np.log10(M*mfrac), log10Z, dust2, np.log(tau), np.log(tmax), z])
         training_mags.append(mags)
         training_absmags.append(absmags)
 
     # cast to np arrays
-    training_theta = np.array(training_theta)
     training_mags = np.array(training_mags)
     training_absmags = np.array(training_absmags)
 
