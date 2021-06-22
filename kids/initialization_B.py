@@ -30,11 +30,11 @@ model_error = tf.constant([0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03]
 zp_error = tf.constant([0.05, 0.01, 0.01, 0.01, 0.03, 0.03, 0.03, 0.03, 0.03], dtype=tf.float32)
 
 # import data (with speczs)
-flux_sigmas = np.load('/cfs/home/alju5794/steppz/kids/data/flux_errors_no_missing.npy'.format(root_dir))*(1e9)*puff # units: nanomaggies
-fluxes = np.load('/cfs/home/alju5794/steppz/kids/data/fluxes_no_missing.npy'.format(root_dir))*1e9 # units: nanomaggies
-zspec = np.load('/cfs/home/alju5794/steppz/kids/data/zspec_no_missing.npy'.format(root_dir))
-zb = np.load('/cfs/home/alju5794/steppz/kids/data/zb_no_missing.npy'.format(root_dir))
-specsource = np.load('/cfs/home/alju5794/steppz/kids/data/specsource_no_missing.npy'.format(root_dir))
+flux_sigmas = np.load('/cfs/home/alju5794/steppz/kids/data/flux_errors_no_missing.npy')*(1e9)*puff # units: nanomaggies
+fluxes = np.load('/cfs/home/alju5794/steppz/kids/data/fluxes_no_missing.npy')*1e9 # units: nanomaggies
+zspec = np.load('/cfs/home/alju5794/steppz/kids/data/zspec_no_missing.npy')
+zb = np.load('/cfs/home/alju5794/steppz/kids/data/zb_no_missing.npy')
+specsource = np.load('/cfs/home/alju5794/steppz/kids/data/specsource_no_missing.npy')
 
 # cut out dodgy values
 cut = (fluxes < 1e9).all(axis=1) * (zspec < 2.0) * (zspec > 1e-3) * (specsource != 'CDFS') * (specsource != 'VVDS')
