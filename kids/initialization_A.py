@@ -1,10 +1,8 @@
 import numpy as np
-from tqdm import trange
 
 import sys
 sys.path.append('/cfs/home/alju5794/steppz/code')
 from utils import *
-from plotting import *
 from priors import *
 from likelihoods import *
 
@@ -73,7 +71,7 @@ predicted_fluxes_ = tf.expand_dims(training_flux, 1)
 estimator_phi = np.zeros((fluxes.shape[0], training_phi.shape[-1]))
 estimator_theta = np.zeros((fluxes.shape[0], training_phi.shape[-1]))
 
-for i in trange(fluxes.shape[0]):
+for i in range(fluxes.shape[0]):
     
     fluxes_ = tf.expand_dims(fluxes[i,:], 0)
     predicted_flux_variances_ = flux_sigmas[i,:]**2 + extra_flux_variance_
@@ -87,7 +85,7 @@ np.save('/cfs/home/alju5794/steppz/kids/initializations/A_theta0.npy', estimator
 
 n_walkers = 1000
 walkers = np.zeros((n_walkers, estimator_phi.shape[0], estimator_phi.shape[1]))
-for i in trange(estimator_phi.shape[0]):
+for i in range(estimator_phi.shape[0]):
     walkers[:,i,:] = estimator_phi[i,:] + np.random.normal(0, 0.05, size=(n_walkers, estimator_phi.shape[1]))
     
 np.save('/cfs/home/alju5794/steppz/kids/initializations/A_walkers_phi.npy', walkers)
