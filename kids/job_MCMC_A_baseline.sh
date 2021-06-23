@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-#SBATCH -J in_HMII
+#SBATCH -J A_base
 #SBATCH -t 12:00:00
 #SBATCH -A cops
 #SBATCH -p ampere
@@ -16,4 +16,4 @@ ulimit -s unlimited  # Unlimited stack
 ulimit -u 16000      # Increase max number of tasks
 ulimit -n 65536      # Increase max number of open files
 
-python3 initialization_HMII.py
+python3 MCMC_A_baseline.py

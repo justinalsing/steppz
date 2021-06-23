@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-#SBATCH -J init_HMI
+#SBATCH -J in_HMI
 #SBATCH -t 12:00:00
 #SBATCH -A cops
 #SBATCH -p ampere

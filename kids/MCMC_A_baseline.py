@@ -54,12 +54,12 @@ n_sigma_flux_cuts = tf.constant([1., 1., 3., 1., 0., 0., 0., 0., 0.], dtype=tf.f
 n_layers = 4
 n_hidden = 128
 filternames = ['omegacam_u', 'omegacam_g', 'omegacam_r', 'omegacam_i', 'VISTA_Z', 'VISTA_Y', 'VISTA_J', 'VISTA_H', 'VISTA_Ks']
-root_dir = '/cfs/home/alju5794/steppz/sps_models/model_HMII/trained_models/'
+root_dir = '/cfs/home/alju5794/steppz/sps_models/model_A/trained_models/'
 filenames = ['model_{}x{}'.format(n_layers, n_hidden) + filtername for filtername in filternames]
 emulator = PhotulatorModelStack(root_dir=root_dir, filenames=filenames)
 
 # prior limits and associated hard priors
-sps_prior = ModelHMIIBaselinePrior()
+sps_prior = ModelABBaselinePrior()
 n_sps_parameters = sps_prior.n_sps_parameters
 
 # bijector from constrained parameter (physical) to unconstrained space for sampling. Note: no bijector for the normalization parameter N
@@ -101,7 +101,7 @@ def log_latentparameter_conditional(latentparameters, hyperparameters, fluxes, f
 
 # initial walker states
 n_walkers = 300
-latent_current_state = [tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/HMII_walkers_phi.npy')[0:n_walkers,:,:].astype(np.float32), dtype=tf.float32), tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/HMII_walkers_phi.npy')[n_walkers:2*n_walkers,:,:].astype(np.float32), dtype=tf.float32)]
+latent_current_state = [tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/A_walkers_phi.npy')[0:n_walkers,:,:].astype(np.float32), dtype=tf.float32), tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/A_walkers_phi.npy')[n_walkers:2*n_walkers,:,:].astype(np.float32), dtype=tf.float32)]
 
 # initialize hyper-parameters
 hyperparameters = tf.concat([tf.ones(9, dtype=tf.float32), model_error + zp_error], axis=-1)
@@ -136,4 +136,4 @@ for batch in range(n_latent_batches):
 #    print('batch {} took {}min'.format(batch, (time.time() - start)/60.))
     
     # save the chain
-    np.save('/cfs/home/alju5794/steppz/kids/chains/HMII_baseline_batch{}.npy'.format(batch), sps_prior.bijector(latent_samples[-keep:,:,:,:].astype(np.float32)).numpy() )
+    np.save('/cfs/home/alju5794/steppz/kids/chains/A_baseline_batch{}.npy'.format(batch), sps_prior.bijector(latent_samples[-keep:,:,:,:].astype(np.float32)).numpy() )
