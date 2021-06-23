@@ -58,7 +58,7 @@ def metallicity_mass_log_prob(log10Z, log10M):
     log10Z_mu = -0.25933163 + 0.38391743*tf.tanh(2.0229099*log10M - 20.37321787)
     log10Z_sigma = 0.6883885 - 0.37122853*tf.tanh(2.47629773*log10M - 25.74109587)
 
-    return - tf.multiply(0.5, tf.square(tf.divide(tf.subtract(log10Z, log10Z_mu), log10Z_sigma))) - tf.add(halfln2pi, tf.math.log(log10Z_sigma)) - tf.math.log(tf.math.erf((0.19 - log10Z)/(tf.sqrt(2.)*log10Z_sigma)) - tf.math.erf((-1.98 - log10Z)/(tf.sqrt(2.)*log10Z_sigma)) )
+    return - tf.multiply(0.5, tf.square(tf.divide(tf.subtract(log10Z, log10Z_mu), log10Z_sigma))) - tf.add(halfln2pi_, tf.math.log(log10Z_sigma)) - tf.math.log(tf.math.erf((0.19 - log10Z)/(tf.sqrt(2.)*log10Z_sigma)) - tf.math.erf((-1.98 - log10Z)/(tf.sqrt(2.)*log10Z_sigma)) )
 
 
 class ProspectorAlphaBaselinePrior:
