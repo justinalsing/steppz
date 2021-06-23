@@ -96,7 +96,7 @@ class ProspectorAlphaBaselinePrior:
         # compute prior log density...
         
         # initialise log target density to baseline prior (unit normal prior on unconstrained parameters: NB not applied to normalization parameter N which is not bijected)
-        logp = tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,1:]), axis=-1)
+        logp = tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,1:]), axis=-1, keepdims=True)
         
         # logmass prior
         logp = logp + mass_function_log_prob(log10M, z)
@@ -128,7 +128,8 @@ class ProspectorAlphaBaselinePrior:
         # z prior
         ### uniform only ###
 
-        return logp
+        return tf.squeeze(logp, axis=-1)
+        
 
 class ModelHMIBaselinePrior:
     
@@ -165,7 +166,7 @@ class ModelHMIBaselinePrior:
         # compute prior log density...
         
         # initialise log target density to baseline prior (unit normal prior on unconstrained parameters: NB not applied to normalization parameter N which is not bijected)
-        logp = tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,1:]), axis=-1)
+        logp = tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,1:]), axis=-1, keepdims=True)
         
         # logmass prior
         logp = logp + mass_function_log_prob(log10M, z)
@@ -185,7 +186,8 @@ class ModelHMIBaselinePrior:
         # z prior
         ### uniform only ###
 
-        return logp
+        return tf.squeeze(logp, axis=-1)
+
 
 class ModelHMIIBaselinePrior:
     
@@ -222,7 +224,7 @@ class ModelHMIIBaselinePrior:
         # compute prior log density...
         
         # initialise log target density to baseline prior (unit normal prior on unconstrained parameters: NB not applied to normalization parameter N which is not bijected)
-        logp = tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,1:]), axis=-1)
+        logp = tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,1:]), axis=-1, keepdims=True)
         
         # logmass prior
         logp = logp + mass_function_log_prob(log10M, z)
@@ -245,7 +247,7 @@ class ModelHMIIBaselinePrior:
         # z prior
         ### uniform only ###
 
-        return logp
+        return tf.squeeze(logp, axis=-1)
 
 
 class ModelABBaselinePrior:
@@ -286,7 +288,7 @@ class ModelABBaselinePrior:
         # compute prior log density...
         
         # initialise log target density to baseline prior (unit normal prior on unconstrained parameters: NB not applied to normalization parameter N which is not bijected)
-        logp = tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,1:]), axis=-1)
+        logp = tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,1:]), axis=-1, keepdims=True)
         
         # logmass prior
         logp = logp + mass_function_log_prob(log10M, z)
@@ -310,4 +312,4 @@ class ModelABBaselinePrior:
         # z prior
         ### uniform only ###
 
-        return logp
+        return tf.squeeze(logp, axis=-1)
