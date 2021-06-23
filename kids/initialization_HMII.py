@@ -86,9 +86,27 @@ for i in range(fluxes.shape[0]):
 np.save('/cfs/home/alju5794/steppz/kids/initializations/HMII_phi0.npy', estimator_phi)
 np.save('/cfs/home/alju5794/steppz/kids/initializations/HMII_theta0.npy', estimator_theta)
 
+log10M_bijector = tfb.Invert(tfb.Chain([tfb.Invert(tfb.NormalCDF()), tfb.Scale(1./(13.-7.)), tfb.Shift(-7.)]))
+z_bijector = tfb.Invert(tfb.Chain([tfb.Invert(tfb.NormalCDF()), tfb.Scale(1./(2.5-1e-5)), tfb.Shift(-1e-5)]))
+
 n_walkers = 1000
 walkers = np.zeros((n_walkers, estimator_phi.shape[0], estimator_phi.shape[1]))
 for i in range(estimator_phi.shape[0]):
+
+	# phi walkers
     walkers[:,i,:] = estimator_phi[i,:] + np.random.normal(0, 0.05, size=(n_walkers, estimator_phi.shape[1]))
+
+    # mass estimator
+    log10M_0 = (estimator_theta[i,0] - distance_modulus(tf.math.maximum(1e-5, estimator_theta[i,-1])).numpy())/-2.5
+
+    # mass samples in bijected space
+    log10M = log10M_bijector(log10M_bijector.inverse(log10M_0).numpy() + np.random.normal(0, 0.05, n_walkers).astype(np.float32)).numpy()
+
+    # convert back to N
+    N = -2.5*log10M + distance_modulus(tf.math.maximum(1e-5, z_bijector(walkers[:,i,-1]))).numpy()
+
+    # put into walkers
+    walkers[:,i,0] = N
+
     
 np.save('/cfs/home/alju5794/steppz/kids/initializations/HMII_walkers_phi.npy', walkers)
