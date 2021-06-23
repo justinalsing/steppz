@@ -78,6 +78,9 @@ class ProspectorAlphaBaselinePrior:
         # baseline prior on unconstrained latent parameters
         # note this does not apply to the normalization parameter N
         self.baselinePrior = tfd.Normal(loc=0., scale=1.)
+
+        # mass limits prior
+        self.massLimitsPrior = tfd.Uniform(low=7., high=13.)
         
     @tf.function
     def log_prob(self, latentparameters):
@@ -99,7 +102,7 @@ class ProspectorAlphaBaselinePrior:
         logp = tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,1:]), axis=-1, keepdims=True)
         
         # logmass prior
-        logp = logp + mass_function_log_prob(log10M, z)
+        logp = logp + mass_function_log_prob(log10M, z) + self.massLimitsPrior.log_prob(log10M)
 
         # metallicity prior
         logp = logp + metallicity_mass_log_prob(log10Z, log10M)
@@ -148,6 +151,9 @@ class ModelHMIBaselinePrior:
         # baseline prior on unconstrained latent parameters
         # note this does not apply to the normalization parameter N
         self.baselinePrior = tfd.Normal(loc=0., scale=1.)
+
+        # mass limits prior
+        self.massLimitsPrior = tfd.Uniform(low=7., high=13.)
         
     @tf.function
     def log_prob(self, latentparameters):
@@ -169,7 +175,7 @@ class ModelHMIBaselinePrior:
         logp = tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,1:]), axis=-1, keepdims=True)
         
         # logmass prior
-        logp = logp + mass_function_log_prob(log10M, z)
+        logp = logp + mass_function_log_prob(log10M, z) + self.massLimitsPrior.log_prob(log10M)
 
         # metallicity prior
         logp = logp + metallicity_mass_log_prob(log10Z, log10M)
@@ -206,6 +212,9 @@ class ModelHMIIBaselinePrior:
         # baseline prior on unconstrained latent parameters
         # note this does not apply to the normalization parameter N
         self.baselinePrior = tfd.Normal(loc=0., scale=1.)
+
+        # mass limits prior
+        self.massLimitsPrior = tfd.Uniform(low=7., high=13.)
         
     @tf.function
     def log_prob(self, latentparameters):
@@ -227,7 +236,7 @@ class ModelHMIIBaselinePrior:
         logp = tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,1:]), axis=-1, keepdims=True)
         
         # logmass prior
-        logp = logp + mass_function_log_prob(log10M, z)
+        logp = logp + mass_function_log_prob(log10M, z) + self.massLimitsPrior.log_prob(log10M)
 
         # metallicity prior
         logp = logp + metallicity_mass_log_prob(log10Z, log10M)
@@ -268,6 +277,9 @@ class ModelABBaselinePrior:
         # note this does not apply to the normalization parameter N
         self.baselinePrior = tfd.Normal(loc=0., scale=1.)
 
+        # mass limits prior
+        self.massLimitsPrior = tfd.Uniform(low=7., high=13.)
+
         # star formation history parameters prior: import conditional density estimator model for P(SFH | z)
         self.SFHPrior = SFHPrior
         
@@ -291,7 +303,7 @@ class ModelABBaselinePrior:
         logp = tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,1:]), axis=-1, keepdims=True)
         
         # logmass prior
-        logp = logp + mass_function_log_prob(log10M, z)
+        logp = logp + mass_function_log_prob(log10M, z) + self.massLimitsPrior.log_prob(log10M)
 
         # metallicity prior
         logp = logp + metallicity_mass_log_prob(log10Z, log10M)
