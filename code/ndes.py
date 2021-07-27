@@ -338,3 +338,103 @@ class MixtureDensityNetworkDiag(tfd.Distribution):
 					break
 		return training_loss, validation_loss
 
+
+
+class AutoregressiveNeuralSplineFlow(tf.Module):
+    
+    def __init__(self, n_bins=32, n_dimensions=3, n_conditional=3, n_hidden=[10, 10], activation=tf.tanh, base_loc=0., base_scale=0.25, restore=False, restore_filename=None):
+        
+        # set up variables...
+
+        # load parameters if restoring saved model
+        if restore:
+          n_bins, n_dimensions, n_conditional, base_loc, base_scale, n_hidden, activation, loaded_trainable_variables = pickle.load(open(restore_filename, 'rb'))
+
+        # spline bins
+        self._n_bins = n_bins
+        
+        # density and conditional dimensions
+        self._n_dimensions = n_dimensions
+        self._n_conditional = n_conditional
+        
+        # hidden units and activation function
+        self._n_hidden = n_hidden
+        self._activation = activation
+        
+        # loc and scale for the (normal) base density
+        self._base_loc = base_loc
+        self._base_scale = base_scale
+
+        # construct the model...
+
+        # conditional autoregressive network parameterizing the bin widths
+        self._bin_widths_ = tfb.AutoregressiveNetwork(params=self._n_bins, 
+                                                     event_shape=self._n_dimensions, 
+                                                     conditional=True, 
+                                                     conditional_event_shape=self._n_conditional,
+                                                     hidden_units=self._n_hidden,
+                                                     activation=self._activation)
+
+        # conditional autoregressive network parameterizing the bin heights
+        self._bin_heights_ = tfb.AutoregressiveNetwork(params=self._n_bins, 
+                                                     event_shape=self._n_dimensions, 
+                                                     conditional=True, 
+                                                     conditional_event_shape=self._n_conditional,
+                                                     hidden_units=self._n_hidden,
+                                                     activation=self._activation)
+        
+        # conditional autoregressive network parameterizing the slopes
+        self._knot_slopes_ = tfb.AutoregressiveNetwork(params=self._n_bins-1, 
+                                                     event_shape=self._n_dimensions, 
+                                                     conditional=True, 
+                                                     conditional_event_shape=self._n_conditional,
+                                                     hidden_units=self._n_hidden,
+                                                     activation=self._activation)
+        
+        # call to initialize trainable variables
+        _ = self.__call__(tf.zeros((1, self._n_dimensions)), tf.zeros((1, self._n_conditional)))
+        
+        if restore:
+			      for model_variable, loaded_variable in zip(self.trainable_variables, loaded_trainable_variables):
+				        model_variable.assign(loaded_variable)
+
+    # softmax the bin widths
+    def bin_widths(self, x, y):
+        
+        return tf.math.softmax(self._bin_widths_(x, conditional_input=y), axis=-1) * (2 - self._n_bins * 1e-2) + 1e-2
+    
+    # softmax the bin heights
+    def bin_heights(self, x, y):
+        
+        return tf.math.softmax(self._bin_heights_(x, conditional_input=y), axis=-1) * (2 - self._n_bins * 1e-2) + 1e-2
+
+    # softplus the knot slopes
+    def knot_slopes(self, x, y):
+        
+        return tf.math.softplus(self._knot_slopes_(x, conditional_input=y)) + 1e-2
+
+    # construct spline bijector given inputs x and conditional inputs y
+    def spline(self, x, y):
+   
+        return tfb.RationalQuadraticSpline(
+            bin_widths=self.bin_widths(x, y),
+            bin_heights=self.bin_heights(x, y),
+            knot_slopes=self.knot_slopes(x, y))
+
+    # construct transformed distribution given inputs x and conditional inputs y
+    def __call__(self, x, y):
+        
+        return tfd.TransformedDistribution(tfd.Normal(loc=self._base_loc, scale=self._base_scale), bijector=self.spline(x, y))
+    
+    @tf.function
+    def log_prob(self, x, y):
+        
+        distribution_ = tfd.TransformedDistribution(tfd.Normal(loc=self._base_loc, scale=self._base_scale), bijector=tfb.RationalQuadraticSpline(bin_widths=self.bin_widths(x, y), bin_heights=self.bin_heights(x, y), knot_slopes=self.knot_slopes(x, y)))
+        
+        return tf.math.reduce_sum(distribution_.log_prob(x), axis=-1)
+
+    # save and restore
+    def save(self, filename):
+
+		    pickle.dump([self._n_bins, self._n_dimensions, self._n_conditional, self._base_loc, self._base_scale, self._n_hidden, self._activation] + [tuple(variable.numpy() for variable in self.trainable_variables)], open(filename, 'wb'))
+

@@ -267,7 +267,7 @@ class ModelABBaselinePrior:
         self.n_sps_parameters = 9
         self.parameter_names = ['N', 'log10Z', 'dust2', 'dust1_fraction', 'dust_index', 'log10alpha', 'log10beta', 'tau', 'z']
         self.lower = tf.constant([7., -1.98, 0., 0., -1., -1., -1., 0.1, 1e-5], dtype=tf.float32)
-        self.upper = tf.constant([13., 0.19, 4., 2., 0.4, 3., 3., 13.7, 2.5], dtype=tf.float32)
+        self.upper = tf.constant([13., 0.19, 4., 2., 0.4, 3., 3., 13.78, 2.5], dtype=tf.float32)
 
         # bijector from constrained parameter (physical) to unconstrained space for sampling. 
         # note: no bijector for the normalization parameter N (since it is already unconstrained)
@@ -293,6 +293,9 @@ class ModelABBaselinePrior:
 
         # split up the parameters to make things easier to read
         N, log10Z, dust2, dust1_fraction, dust_index, sfh, z = tf.split(theta, (1, 1, 1, 1, 1, 3, 1), axis=-1)
+
+        # latent version of SFH parameters
+        latent_sfh = latentparameters[..., 5:8]
         
         # convert normalization and redshift to logmass
         log10M = (N - distance_modulus(tf.math.maximum(1e-5, z)))/-2.5
@@ -300,7 +303,7 @@ class ModelABBaselinePrior:
         # compute prior log density...
         
         # initialise log target density to baseline prior (unit normal prior on unconstrained parameters: NB not applied to normalization parameter N which is not bijected)
-        logp = tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,1:]), axis=-1, keepdims=True)
+        logp = tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,0:5]), axis=-1, keepdims=True) + tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,8:]), axis=-1, keepdims=True)
         
         # logmass prior
         logp = logp + mass_function_log_prob(log10M, z) + self.massLimitsPrior.log_prob(log10M)
@@ -319,7 +322,7 @@ class ModelABBaselinePrior:
 
         # SFH prior
         if self.SFHPrior is not None:
-            logp = logp + self.SFHPrior.log_prob(sfh, conditional=z)
+            logp = logp + self.SFHPrior.log_prob(latent_sfh, z)
 
         # z prior
         ### uniform only ###
