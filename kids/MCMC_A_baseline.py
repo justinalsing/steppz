@@ -14,35 +14,14 @@ from affine import *
 # number of bands
 n_bands = 9
 
-# puffing factor for gaussian errors
-puff = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.3, 1.0, 1.0])
-
 # assumed fractional model error per band
 model_error = tf.constant([0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03], dtype=tf.float32)
 
 # assumed ZP (fractional) error per band
 zp_error = tf.constant([0.05, 0.01, 0.01, 0.01, 0.03, 0.03, 0.03, 0.03, 0.03], dtype=tf.float32)
 
-# import data (with speczs)
-flux_sigmas = np.load('/cfs/home/alju5794/steppz/kids/data/flux_errors_no_missing.npy')*(1e9)*puff # units: nanomaggies
-fluxes = np.load('/cfs/home/alju5794/steppz/kids/data/fluxes_no_missing.npy')*1e9 # units: nanomaggies
-zspec = np.load('/cfs/home/alju5794/steppz/kids/data/zspec_no_missing.npy')
-zb = np.load('/cfs/home/alju5794/steppz/kids/data/zb_no_missing.npy')
-specsource = np.load('/cfs/home/alju5794/steppz/kids/data/specsource_no_missing.npy')
-
-# cut out dodgy values
-cut = (fluxes < 1e9).all(axis=1) * (zspec < 2.0) * (zspec > 1e-3) * (specsource != 'CDFS') * (specsource != 'VVDS')
-fluxes = fluxes[cut,:]
-flux_sigmas = flux_sigmas[cut,:]
-zspec = zspec[cut]
-zb = zb[cut]
-specsource = specsource[cut]
-
-# select a subset of the galaxies
-#fluxes = fluxes[0:n_galaxies:,:]
-#flux_sigmas = flux_sigmas[0:n_galaxies:,:]
-#zspec = zspec[0:n_galaxies:]
-#zb = zb[0:n_galaxies:]
+# import data
+fluxes, flux_sigmas, zspec, specsource, zb, zprior_sig = pickle.load(open('/cfs/home/alju5794/steppz/kids/data/KV450_cut_all.pkl', 'rb'))
 
 # convert to tensors
 flux_variances = tf.constant(np.atleast_2d(flux_sigmas**2).astype(np.float32), dtype=tf.float32)
