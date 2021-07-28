@@ -1,4 +1,4 @@
-
+import pickle
 
 import numpy as np
 from speculator import Photulator, PhotulatorModelStack
