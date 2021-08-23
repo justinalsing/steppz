@@ -322,8 +322,12 @@ class ModelABBaselinePrior:
 
         # SFH prior
         if self.SFHPrior is not None:
-            logp = logp + self.SFHPrior.log_prob(latent_sfh, z)
-
+            if len(latent_sfh.shape) > 2:
+                dims = latent_sfh.shape[:-1]
+                size = tf.math.reduce_prod(dims)
+                logp = logp + tf.reshape(self.SFHPrior.log_prob(tf.reshape(latent_sfh, [size, 3]), tf.reshape(z, [size, 1]) ), dims)
+            else:
+                logp = logp + self.SFHPrior.log_prob(latent_sfh, z)
         # z prior
         ### uniform only ###
 
