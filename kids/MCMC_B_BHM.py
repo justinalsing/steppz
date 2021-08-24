@@ -171,7 +171,7 @@ for step in range(n_steps):
     latent_samples_ = tf.concat([affine_sample_batch_state(log_latentparameter_conditional, 
                                                      n_sub_steps, 
                                                      [tf.gather(latent_current_state[0], batch_indices[_], axis=1), tf.gather(latent_current_state[1], batch_indices[_], axis=1)], 
-                                                     args=[hyper_parameters_, tf.gather(fluxes, batch_indices[_], axis=0), tf.gather(flux_variances, batch_indices[_], axis=0), n_sigma_flux_cuts, tf.gather(zspec, batch_indices[_], axis=0), tf.gather(zprior_sig, batch_indices[_], axis=0)], tensor=True) for _ in range(n_latent_batches)], axis=1)
+                                                     args=[hyper_parameters_, tf.gather(fluxes, batch_indices[_], axis=0), tf.gather(flux_variances, batch_indices[_], axis=0), n_sigma_flux_cuts, tf.gather(zspec, batch_indices[_], axis=0), tf.gather(zprior_sig, batch_indices[_], axis=0), nz_parameters_], tensor=True) for _ in range(n_latent_batches)], axis=1)
     latent_current_state = tf.split(latent_samples_, (n_latent_walkers, n_latent_walkers), axis=0) # set current walkers state
     latent_parameters_ = latent_current_state[np.random.randint(0, 2)][np.random.randint(0, n_latent_walkers),...] # latent-parameters to condition on for next Gibbs step (chosen randomly from walkers)
 
