@@ -178,7 +178,7 @@ for step in range(n_steps):
     # compute model fluxes for latent parameters that we'll now condition on (which remain fixed during the hyper-parameter sampling step)
     theta = sps_prior.bijector(latent_parameters_)
     N = theta[...,0] # extract normalization parameter N = -2.5log10M + dm(z)
-    model_fluxes = tf.concat([Emulator.fluxes(transform(tf.gather(theta[...,1:], batch_indices[_], axis=0)), tf.gather(N, batch_indices[_], axis=0)) for _ in range(n_latent_batches)], axis=0)        
+    model_fluxes = tf.concat([emulator.fluxes(transform(tf.gather(theta[...,1:], batch_indices[_], axis=0)), tf.gather(N, batch_indices[_], axis=0)) for _ in range(n_latent_batches)], axis=0)        
 
     # sample hyper-parameters, conditioned on latent parameters
     hyper_samples_ = affine_sample(log_hyperparameter_conditional, n_sub_steps, hyper_current_state, args=[model_fluxes, fluxes, flux_variances, n_sigma_flux_cuts])
