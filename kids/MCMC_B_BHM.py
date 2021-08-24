@@ -82,7 +82,7 @@ def log_latentparameter_conditional(latentparameters, hyperparameters, fluxes, f
     log_prior_ = sps_prior.log_prob(latentparameters)
 
     # extra redshift prior
-    log_z_prior_ = -tf.reduce_sum(tf.multiply(0.5, tf.square(tf.divide(tf.subtract(z, zspec), zprior_sig))))
+    log_z_prior_ = -tf.multiply(0.5, tf.square(tf.divide(tf.subtract(z, zspec), zprior_sig)))
     
     return log_likelihood_ + log_prior_ + log_z_prior_
 
