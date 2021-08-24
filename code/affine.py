@@ -151,7 +151,7 @@ def affine_sample_batch(log_prob, n_steps, current_state, args=[], progressbar=T
     return chain
 
 # state variables have shape: (n_walkers, n_batch, n_params)
-def affine_sample_batch_state(log_prob, n_steps, current_state, args=[], progressbar=True):
+def affine_sample_batch_state(log_prob, n_steps, current_state, args=[], progressbar=True, tensor=False):
     
     # split the current state
     current_state1, current_state2 = current_state
@@ -216,4 +216,7 @@ def affine_sample_batch_state(log_prob, n_steps, current_state, args=[], progres
         logp_current2 = tf.where(accept2_, logp_proposed2, logp_current2)
 
     # return current state
-    return [current_state1, current_state2]
+    if tensor:
+        return tf.concat([current_state1, current_state2], axis=0)
+    else:
+        return [current_state1, current_state2]

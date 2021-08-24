@@ -55,7 +55,7 @@ transform = tfb.Blockwise(transforms)
 
 # input shape of latent parameters should be (n_walkers, n_galaxies, n_sps_parameters), output shape should be (n_walkers, n_galaxies)
 @tf.function
-def log_latentparameter_conditional(latentparameters, hyperparameters, fluxes, flux_variances, n_sigma_flux_cuts):
+def log_latentparameter_conditional(latentparameters, hyperparameters, fluxes, flux_variances, n_sigma_flux_cuts, zspec, zprior_sig):
     
     # split the hyper parameters
     zero_points, additive_fractional_errors = tf.split(hyperparameters, (n_bands, n_bands), axis=-1)
@@ -65,7 +65,8 @@ def log_latentparameter_conditional(latentparameters, hyperparameters, fluxes, f
     # convert latent parameters into physical parameters using bijector
     theta = sps_prior.bijector(latentparameters)
     N = theta[...,0] # extract normalization parameter N = -2.5log10M + dm(z)
-    
+    z = theta[...,-1] # extract redshift
+
     # model and predicted fluxes (multiplied by zero points)
     model_fluxes = emulator.fluxes(transform(theta[...,1:]), N)
     predicted_fluxes = tf.multiply(model_fluxes, zero_points)
@@ -78,8 +79,11 @@ def log_latentparameter_conditional(latentparameters, hyperparameters, fluxes, f
     
     # log-prior
     log_prior_ = sps_prior.log_prob(latentparameters)
+
+    # extra redshift prior
+    log_z_prior_ = -tf.reduce_sum(tf.multiply(0.5, tf.square(tf.divide(tf.subtract(z, zspec), zprior_sig))))
     
-    return log_likelihood_ + log_prior_
+    return log_likelihood_ + log_prior_ + log_z_prior_
 
 # input shape of hyperparameters should be (n_walkers, n_hyperparameters), output shape should be (n_walkers)
 @tf.function
@@ -111,7 +115,7 @@ n_walkers = 300
 latent_current_state = [tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[0:n_walkers,:,:].astype(np.float32), dtype=tf.float32), tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[n_walkers:2*n_walkers,:,:].astype(np.float32), dtype=tf.float32)]
 
 # initialize hyper-parameters
-hyper_parameters_ = tf.concat([tf.ones(9, dtype=tf.float32), model_error + zp_error], axis=-1) + tf.random.normal([])
+hyper_parameters_ = tf.concat([tf.ones(9, dtype=tf.float32), model_error + zp_error], axis=-1)
 hyper_current_state = [hyper_parameters_ + tf.random.normal([n_walkers, hyper_parameters_.shape[0]], 0, 1e-3), hyper_parameters_ + tf.random.normal([n_walkers, hyper_parameters_.shape[0]], 0, 1e-3)]
 
 # set up batching of latent parameters
@@ -128,11 +132,11 @@ n_sub_steps = 5
 for step in range(n_steps):
 
     # sample latent parameters, conditioned on hyper-parameters (do it in batches and concatenate them together)
-    latent_samples_ = tf.concat([affine_sample_batch(log_latentparameter_conditional, 
+    latent_samples_ = tf.concat([affine_sample_batch_state(log_latentparameter_conditional, 
                                                      n_sub_steps, 
                                                      [tf.gather(latent_current_state[0], batch_indices[_], axis=1), tf.gather(latent_current_state[1], batch_indices[_], axis=1)], 
-                                                     args=[hyper_parameters_, tf.gather(fluxes, batch_indices[_], axis=0), tf.gather(flux_variances, batch_indices[_], axis=0), n_sigma_flux_cuts]) for _ in range(n_latent_batches)], axis=2)
-    latent_current_state = tf.split(latent_samples_[-1,...], (n_latent_walkers, n_latent_walkers), axis=0) # set current walkers state
+                                                     args=[hyper_parameters_, tf.gather(fluxes, batch_indices[_], axis=0), tf.gather(flux_variances, batch_indices[_], axis=0), n_sigma_flux_cuts, tf.gather(zspec, batch_indices[_], axis=0), tf.gather(zprior_sig, batch_indices[_], axis=0)], tensor=True) for _ in range(n_latent_batches)], axis=1)
+    latent_current_state = tf.split(latent_samples_, (n_latent_walkers, n_latent_walkers), axis=0) # set current walkers state
     latent_parameters_ = latent_current_state[np.random.randint(0, 2)][np.random.randint(0, n_latent_walkers),...] # latent-parameters to condition on for next Gibbs step (chosen randomly from walkers)
 
     # compute model fluxes for latent parameters that we'll now condition on (which remain fixed during the hyper-parameter sampling step)
