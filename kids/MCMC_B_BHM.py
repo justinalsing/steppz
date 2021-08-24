@@ -1,6 +1,5 @@
 import pickle
 
-
 import numpy as np
 from speculator import Photulator, PhotulatorModelStack
 import time
@@ -28,6 +27,8 @@ fluxes, flux_sigmas, zspec, specsource, zb, zprior_sig = pickle.load(open('/cfs/
 # convert to tensors
 flux_variances = tf.constant(np.atleast_2d(flux_sigmas**2).astype(np.float32), dtype=tf.float32)
 fluxes = tf.constant(np.atleast_2d(fluxes).astype(np.float32), dtype=tf.float32)
+zspec = tf.constant(np.atleast_2d(zspec).astype(np.float32), dtype=tf.float32)
+zprior_sig = tf.constant(np.atleast_2d(zprior_sig).astype(np.float32), dtype=tf.float32)
 
 # n_sigma_flux_cuts
 n_sigma_flux_cuts = tf.constant([1., 1., 3., 1., 0., 0., 0., 0., 0.], dtype=tf.float32)
