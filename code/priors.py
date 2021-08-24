@@ -320,6 +320,9 @@ class ModelABBaselinePrior:
         # dust1 fraction prior
         logp = logp - tf.multiply(0.5, tf.square(tf.divide(tf.subtract(dust1_fraction, 1.), 0.3)))
 
+        # squeeze
+        logp = tf.squeeze(logp, axis=-1)
+
         # SFH prior
         if self.SFHPrior is not None:
             if len(latent_sfh.shape) > 2:
@@ -328,7 +331,5 @@ class ModelABBaselinePrior:
                 logp = logp + tf.reshape(self.SFHPrior.log_prob(tf.reshape(latent_sfh, [size, 3]), tf.reshape(z, [size, 1]) ), dims)
             else:
                 logp = logp + self.SFHPrior.log_prob(latent_sfh, z)
-        # z prior
-        ### uniform only ###
 
-        return tf.squeeze(logp, axis=-1)
+        return logp
