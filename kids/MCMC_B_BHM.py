@@ -56,7 +56,7 @@ transform = tfb.Blockwise(transforms)
 
 # input shape of latent parameters should be (n_walkers, n_galaxies, n_sps_parameters), output shape should be (n_walkers, n_galaxies)
 @tf.function
-def log_latentparameter_conditional(latentparameters, hyperparameters, fluxes, flux_variances, n_sigma_flux_cuts, zspec, zprior_sig):
+def log_latentparameter_conditional(latentparameters, hyperparameters, fluxes, flux_variances, n_sigma_flux_cuts, zspec, zprior_sig, nz_parameters):
     
     # split the hyper parameters
     zero_points, additive_fractional_errors = tf.split(hyperparameters, (n_bands, n_bands), axis=-1)
@@ -81,10 +81,21 @@ def log_latentparameter_conditional(latentparameters, hyperparameters, fluxes, f
     # log-prior
     log_prior_ = sps_prior.log_prob(latentparameters)
 
-    # extra redshift prior
-    log_z_prior_ = -tf.multiply(0.5, tf.square(tf.divide(tf.subtract(z, zspec), zprior_sig)))
+    # extra redshift prior from speczs
+    log_speczz_prior_ = -tf.multiply(0.5, tf.square(tf.divide(tf.subtract(z, zspec), zprior_sig)))
+
+    # extra redshift prior from n(z)...
+
+    # parameters
+    logits, locs, logscales, skewness, tailweight = tf.split(nz_parameters, (3, 3, 3, 3, 3), axis=-1)
+
+    # mixture model
+    nz = tfd.MixtureSameFamily(mixture_distribution=tfd.Categorical(logits=logits),
+                          components_distribution=tfd.SinhArcsinh(loc=locs, scale=tf.exp(logscales), skewness=skewness, tailweight=tailweight))
+
+    log_z_prior_ = nz.log_prob(z)
     
-    return log_likelihood_ + log_prior_ + log_z_prior_
+    return log_likelihood_ + log_prior_ + log_specz_prior_ + log_z_prior_
 
 # input shape of hyperparameters should be (n_walkers, n_hyperparameters), output shape should be (n_walkers)
 @tf.function
@@ -109,19 +120,43 @@ def log_hyperparameter_conditional(hyperparameters, model_fluxes, fluxes, flux_v
 
     return tf.reduce_sum(log_likelihood_, axis=-1) + log_prior
 
+@tf.function
+def log_nz_conditional(theta, z):
+    
+    # pull out parameters
+    logits, locs, logscales, skewness, tailweight = tf.split(theta, (3, 3, 3, 3, 3), axis=1)
+
+    # mixture model
+    nz = tfd.MixtureSameFamily(mixture_distribution=tfd.Categorical(logits=logits),
+                          components_distribution=tfd.SinhArcsinh(loc=locs, scale=tf.exp(logscales), skewness=skewness, tailweight=tailweight))
+
+    # log prob
+    return tf.reduce_sum(nz.log_prob(z), axis=0)
+
 # initial walker states
-n_walkers = 300
+n_latent_walkers = 300
+n_hyper_walkers = 300
+n_nz_walkers = 300
 
 # initialize latent
-latent_current_state = [tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[0:n_walkers,:,:].astype(np.float32), dtype=tf.float32), tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[n_walkers:2*n_walkers,:,:].astype(np.float32), dtype=tf.float32)]
+latent_current_state = [tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[0:n_latent_walkers,:,:].astype(np.float32), dtype=tf.float32), tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[n_latent_walkers:2*n_latent_walkers,:,:].astype(np.float32), dtype=tf.float32)]
 
 # initialize hyper-parameters
 hyper_parameters_ = tf.concat([tf.ones(9, dtype=tf.float32), model_error + zp_error], axis=-1)
-hyper_current_state = [hyper_parameters_ + tf.random.normal([n_walkers, hyper_parameters_.shape[0]], 0, 1e-3), hyper_parameters_ + tf.random.normal([n_walkers, hyper_parameters_.shape[0]], 0, 1e-3)]
+hyper_current_state = [hyper_parameters_ + tf.random.normal([n_hyper_walkers, hyper_parameters_.shape[0]], 0, 1e-3), hyper_parameters_ + tf.random.normal([n_hyper_walkers, hyper_parameters_.shape[0]], 0, 1e-3)]
+
+# initialize n(z)
+logits = np.array([-0.67778176, -1.1752868, -1.6953907]).astype(np.float32)
+locs = np.array([0.11383244, 0.28379175, 0.532703]).astype(np.float32)
+scales = np.array([0.05216346, 0.10501441, 0.09464115]).astype(np.float32)
+skewness = np.array([0.23342754,  0.401639, -0.001292]).astype(np.float32)
+tailweight = np.array([0.7333437, 1.6772406, 1.1508114]).astype(np.float32)
+nz_parameters_ = tf.concat([logits, locs, tf.math.log(scales), skewness, tailweight], axis=-1)
+nz_current_state = [nz_parameters_ + tf.random.normal([n_nz_walkers, nz_parameters_.shape[0]], 0, 1e-3), nz_parameters_ + tf.random.normal([n_nz_walkers, nz_parameters_.shape[0]], 0, 1e-3)]
 
 # set up batching of latent parameters
 n_latent = fluxes.shape[0] # number of galaxies
-latent_batch_size = 10000
+latent_batch_size = 1000
 n_latent_batches = n_latent // latent_batch_size + int( (n_latent % latent_batch_size) > 0)
 batch_indices = [np.arange(latent_batch_size*i, min(latent_batch_size*(i+1), n_latent)) for i in range(n_latent_batches)]
 
@@ -149,8 +184,14 @@ for step in range(n_steps):
     hyper_samples_ = affine_sample(log_hyperparameter_conditional, n_sub_steps, hyper_current_state, args=[model_fluxes, fluxes, flux_variances, n_sigma_flux_cuts])
     hyper_current_state = tf.split(hyper_samples_[-1,...], (n_hyper_walkers, n_hyper_walkers), axis=0) # set current walkers state
     hyper_parameters_ = hyper_current_state[np.random.randint(0, 2)][np.random.randint(0, n_hyper_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
+
+    # sample the nz parameters
+    nz_samples_ = affine_sample(log_nz_conditional, n_sub_steps, nz_current_state, args=[tf.expand_dims(latent_parameters_[...,-1], -1)])
+    nz_current_state = tf.split(nz_samples_, (n_nz_walkers, n_nz_walkers), axis=0)
+    nz_parameters_ = nz_current_state[np.random.randint(0, 2)][np.random.randint(0, n_nz_walkers),...] 
     
     # save the chain
     np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM/latent{}.npy'.format(step), sps_prior.bijector(latent_samples_[-1,...].astype(np.float32)).numpy() )
     np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM/hyper{}.npy'.format(step), hyper_samples_[-1,...].astype(np.float32))
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM/nz{}.npy'.format(step), nz_samples_[-1,...].astype(np.float32))
 
