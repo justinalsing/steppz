@@ -191,7 +191,7 @@ for step in range(n_steps):
     nz_parameters_ = nz_current_state[np.random.randint(0, 2)][np.random.randint(0, n_nz_walkers),...] 
     
     # save the chain
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM/latent{}.npy'.format(step), sps_prior.bijector(latent_samples_[-1,...].astype(np.float32)).numpy() )
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM/hyper{}.npy'.format(step), hyper_samples_[-1,...].astype(np.float32))
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM/nz{}.npy'.format(step), nz_samples_[-1,...].astype(np.float32))
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM/latent{}.npy'.format(step), sps_prior.bijector(latent_samples_[-1,...]).numpy().astype(np.float32) )
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM/hyper{}.npy'.format(step), hyper_samples_[-1,...].numpy().astype(np.float32))
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM/nz{}.npy'.format(step), nz_samples_[-1,...].numpy().astype(np.float32))
 
