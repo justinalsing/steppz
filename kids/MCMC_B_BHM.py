@@ -102,9 +102,9 @@ def log_latentparameter_conditional(latentparameters, hyperparameters, fluxes, f
 def log_hyperparameter_conditional(hyperparameters, model_fluxes, fluxes, flux_variances, n_sigma_flux_cuts):
     
     # split the hyper parameters
-    zero_points, additive_fractional_errors = tf.split(hyperparameters, (n_bands, n_bands), axis=-1)
+    zero_points, additive_log_fractional_errors = tf.split(hyperparameters, (n_bands, n_bands), axis=-1)
     zero_points = tf.expand_dims(zero_points, axis=1)
-    additive_fractional_errors = tf.expand_dims(additive_fractional_errors, axis=1)
+    additive_fractional_errors = tf.expand_dims(tf.exp(additive_log_fractional_errors), axis=1)
     
     # compute predicted fluxes from model fluxes and hyper parameters (ie., scale by zero-points)
     predicted_fluxes = tf.multiply(zero_points, model_fluxes)
@@ -116,9 +116,9 @@ def log_hyperparameter_conditional(hyperparameters, model_fluxes, fluxes, flux_v
     log_likelihood_ = log_likelihood_studentst2(fluxes, predicted_fluxes, predicted_flux_variances, n_sigma_flux_cuts)
     
     # log prior
-    log_prior_ = hyperparameter_log_prior(hyperparameters)
+    #log_prior_ = hyperparameter_log_prior(hyperparameters)
 
-    return tf.reduce_sum(log_likelihood_, axis=-1) + log_prior
+    return tf.reduce_sum(log_likelihood_, axis=-1)# + log_prior
 
 @tf.function
 def log_nz_conditional(theta, z):
@@ -142,7 +142,7 @@ n_nz_walkers = 300
 latent_current_state = [tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[0:n_latent_walkers,:,:].astype(np.float32), dtype=tf.float32), tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[n_latent_walkers:2*n_latent_walkers,:,:].astype(np.float32), dtype=tf.float32)]
 
 # initialize hyper-parameters
-hyper_parameters_ = tf.concat([tf.ones(9, dtype=tf.float32), model_error + zp_error], axis=-1)
+hyper_parameters_ = tf.concat([tf.ones(9, dtype=tf.float32), tf.math.log(model_error + zp_error)], axis=-1)
 hyper_current_state = [hyper_parameters_ + tf.random.normal([n_hyper_walkers, hyper_parameters_.shape[0]], 0, 1e-3), hyper_parameters_ + tf.random.normal([n_hyper_walkers, hyper_parameters_.shape[0]], 0, 1e-3)]
 
 # initialize n(z)
