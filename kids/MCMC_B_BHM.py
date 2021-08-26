@@ -59,9 +59,9 @@ transform = tfb.Blockwise(transforms)
 def log_latentparameter_conditional(latentparameters, hyperparameters, fluxes, flux_variances, n_sigma_flux_cuts, zspec, zprior_sig, nz_parameters):
     
     # split the hyper parameters
-    zero_points, additive_fractional_errors = tf.split(hyperparameters, (n_bands, n_bands), axis=-1)
+    zero_points, additive_log_fractional_errors = tf.split(hyperparameters, (n_bands, n_bands), axis=-1)
     zero_points = tf.expand_dims(zero_points, axis=0)
-    additive_fractional_errors = tf.expand_dims(additive_fractional_errors, axis=0)
+    additive_fractional_errors = tf.expand_dims(tf.exp(additive_log_fractional_errors), axis=0)
 
     # convert latent parameters into physical parameters using bijector
     theta = sps_prior.bijector(latentparameters)
