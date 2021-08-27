@@ -70,7 +70,7 @@ for i in range(fluxes.shape[0]):
     estimator_theta[i,:] = training_theta[argmax,:]
 
     # swap redshifts for specz
-    estimator_theta[i,-1] = min(zspec[i], 3e-5)
+    estimator_theta[i,-1] = max(zspec[i], 3e-5)
     estimator_phi[i,-1] = z_bijector.inverse(estimator_theta[i,-1]).numpy()
 
 np.save('/cfs/home/alju5794/steppz/kids/initializations/B_phi0.npy', estimator_phi)
