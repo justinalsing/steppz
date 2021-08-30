@@ -163,7 +163,7 @@ batch_indices = [np.arange(latent_batch_size*i, min(latent_batch_size*(i+1), n_l
 # how many MCMC steps?
 n_steps = 600
 n_sub_steps = 5
-n_burnin_steps = 300
+n_burnin_steps = 400
 
 # burn in...
 
