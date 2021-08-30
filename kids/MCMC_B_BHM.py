@@ -124,7 +124,7 @@ def log_hyperparameter_conditional(hyperparameters, model_fluxes, fluxes, flux_v
 def log_nz_conditional(theta, z):
     
     # pull out parameters
-    logits, locs, logscales, skewness, tailweight = tf.split(theta, (3, 3, 3, 3, 3), axis=1)
+    logits, locs, logscales, skewness, tailweight = tf.split(theta, (3, 3, 3, 3, 3), axis=-1)
 
     # mixture model
     nz = tfd.MixtureSameFamily(mixture_distribution=tfd.Categorical(logits=logits),
@@ -186,7 +186,7 @@ hyper_current_state = tf.split(hyper_samples_[-1,...], (n_hyper_walkers, n_hyper
 hyper_parameters_ = hyper_current_state[np.random.randint(0, 2)][np.random.randint(0, n_hyper_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
 
 # sample the nz parameters
-nz_samples_ = affine_sample(log_nz_conditional, n_burnin_steps, nz_current_state, args=[tf.expand_dims(latent_parameters_[...,-1], -1)])
+nz_samples_ = affine_sample(log_nz_conditional, n_burnin_steps, nz_current_state, args=[tf.expand_dims(theta[...,-1], -1)])
 nz_current_state = tf.split(nz_samples_[-1,...], (n_nz_walkers, n_nz_walkers), axis=0)
 nz_parameters_ = nz_current_state[np.random.randint(0, 2)][np.random.randint(0, n_nz_walkers),...] 
 
@@ -219,7 +219,7 @@ for step in range(n_steps):
     hyper_parameters_ = hyper_current_state[np.random.randint(0, 2)][np.random.randint(0, n_hyper_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
 
     # sample the nz parameters
-    nz_samples_ = affine_sample(log_nz_conditional, n_sub_steps, nz_current_state, args=[tf.expand_dims(latent_parameters_[...,-1], -1)])
+    nz_samples_ = affine_sample(log_nz_conditional, n_sub_steps, nz_current_state, args=[tf.expand_dims(theta[...,-1], -1)])
     nz_current_state = tf.split(nz_samples_[-1,...], (n_nz_walkers, n_nz_walkers), axis=0)
     nz_parameters_ = nz_current_state[np.random.randint(0, 2)][np.random.randint(0, n_nz_walkers),...] 
     
