@@ -303,7 +303,7 @@ class ModelABBaselinePrior:
         # compute prior log density...
         
         # initialise log target density to baseline prior (unit normal prior on unconstrained parameters: NB not applied to normalization parameter N which is not bijected)
-        logp = tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,0:5]), axis=-1, keepdims=True) + tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,8:]), axis=-1, keepdims=True)
+        logp = tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,1:5]), axis=-1, keepdims=True) + tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,8:]), axis=-1, keepdims=True)
         
         # logmass prior
         logp = logp + mass_function_log_prob(log10M, z) + self.massLimitsPrior.log_prob(log10M)

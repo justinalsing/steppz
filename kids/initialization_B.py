@@ -44,7 +44,7 @@ prior = ModelABBaselinePrior()
 training_phi = prior.bijector.inverse(training_theta).numpy()
 
 # cut out nans
-cut = np.isnan(training_phi).any(axis=1)
+cut = np.isnan(training_phi).any(axis=1) + np.isinf(training_phi).any(axis=1)
 training_flux = training_flux[~cut,:]
 training_theta = training_theta[~cut,:]
 training_phi = training_phi[~cut,:]

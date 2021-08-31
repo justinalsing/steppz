@@ -192,6 +192,7 @@ nz_parameters_ = nz_current_state[np.random.randint(0, 2)][np.random.randint(0, 
 
 # save the chain
 np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM/latent{}.npy'.format(0), sps_prior.bijector(latent_samples_).numpy().astype(np.float32) )
+np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM/z{}.npy'.format(0), sps_prior.bijector(latent_samples_).numpy()[...,-1].astype(np.float32) )
 np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM/hyper{}.npy'.format(0), hyper_samples_[-1,...].numpy().astype(np.float32))
 np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM/nz{}.npy'.format(0), nz_samples_[-1,...].numpy().astype(np.float32))
 
@@ -225,6 +226,7 @@ for step in range(n_steps):
     
     # save the chain
     np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM/latent{}.npy'.format(step+1), sps_prior.bijector(latent_samples_).numpy().astype(np.float32) )
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM/z{}.npy'.format(step+1), sps_prior.bijector(latent_samples_).numpy()[...,-1].astype(np.float32) )
     np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM/hyper{}.npy'.format(step+1), hyper_samples_[-1,...].numpy().astype(np.float32))
     np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM/nz{}.npy'.format(step+1), nz_samples_[-1,...].numpy().astype(np.float32))
 
