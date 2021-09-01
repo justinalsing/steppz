@@ -29,6 +29,7 @@ flux_variances = tf.constant(np.atleast_2d(flux_sigmas**2).astype(np.float32), d
 fluxes = tf.constant(np.atleast_2d(fluxes).astype(np.float32), dtype=tf.float32)
 zspec = tf.constant(zspec.astype(np.float32), dtype=tf.float32)
 zprior_sig = tf.constant(zprior_sig.astype(np.float32), dtype=tf.float32)
+zprior_sig_fixed = tf.ones(zprior_sig.shape, dtype=tf.float32)*1e-3
 
 # n_sigma_flux_cuts
 n_sigma_flux_cuts = tf.constant([1., 1., 3., 1., 0., 0., 0., 0., 0.], dtype=tf.float32)
@@ -93,7 +94,7 @@ def log_latentparameter_conditional(latentparameters, hyperparameters, fluxes, f
     nz = tfd.MixtureSameFamily(mixture_distribution=tfd.Categorical(logits=logits),
                           components_distribution=tfd.SinhArcsinh(loc=locs, scale=tf.exp(logscales), skewness=skewness, tailweight=tailweight))
 
-    log_z_prior_ = nz.log_prob(z)
+    log_z_prior_ = nz.log_prob(z) - nz.log_survival_function(0.)
     
     return log_likelihood_ + log_prior_ + log_specz_prior_ + log_z_prior_
 
@@ -131,7 +132,7 @@ def log_nz_conditional(theta, z):
                           components_distribution=tfd.SinhArcsinh(loc=locs, scale=tf.exp(logscales), skewness=skewness, tailweight=tailweight))
 
     # log prob
-    return tf.reduce_sum(nz.log_prob(z), axis=0)
+    return tf.reduce_sum(nz.log_prob(z) - nz.log_survival_function(0.), axis=0)
 
 # initial walker states
 n_latent_walkers = 300
