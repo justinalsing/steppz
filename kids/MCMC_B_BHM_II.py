@@ -77,7 +77,7 @@ def log_latentparameter_conditional(latentparameters, hyperparameters, fluxes, f
     predicted_flux_variances = tf.add(flux_variances, tf.square(tf.multiply(additive_fractional_errors, predicted_fluxes)))
 
     # log likelihood
-    log_likelihood_ = log_likelihood_studentst2(fluxes, predicted_fluxes, predicted_flux_variances, n_sigma_flux_cuts)
+    log_likelihood_ = log_likelihood_studentst2(fluxes, flux_variances, predicted_fluxes, predicted_flux_variances, n_sigma_flux_cuts)
     
     # log-prior
     log_prior_ = sps_prior.log_prob(latentparameters)
@@ -114,7 +114,7 @@ def log_hyperparameter_conditional(hyperparameters, model_fluxes, fluxes, flux_v
     predicted_flux_variances = tf.add(flux_variances, tf.square(tf.multiply(additive_fractional_errors, predicted_fluxes)))
 
     # log likelihoods
-    log_likelihood_ = log_likelihood_studentst2(fluxes, predicted_fluxes, predicted_flux_variances, n_sigma_flux_cuts)
+    log_likelihood_ = log_likelihood_studentst2(fluxes, flux_variances, predicted_fluxes, predicted_flux_variances, n_sigma_flux_cuts)
     
     # log prior
     #log_prior_ = hyperparameter_log_prior(hyperparameters)
@@ -139,8 +139,8 @@ def log_nz_conditional(theta, z):
 
 # initial walker states
 n_latent_walkers = 300
-n_hyper_walkers = 300
-n_nz_walkers = 300
+n_hyper_walkers = 500
+n_nz_walkers = 500
 
 # initialize latent
 latent_current_state = [tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[0:n_latent_walkers,:,:].astype(np.float32), dtype=tf.float32), tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[n_latent_walkers:2*n_latent_walkers,:,:].astype(np.float32), dtype=tf.float32)]
@@ -166,8 +166,10 @@ batch_indices = [np.arange(latent_batch_size*i, min(latent_batch_size*(i+1), n_l
 
 # how many MCMC steps?
 n_steps = 600
-n_sub_steps = 5
-n_burnin_steps = 400
+n_latent_sub_steps = 10
+n_hyper_sub_steps = 10
+n_nz_sub_steps = 10
+n_burnin_steps = 500
 
 # burn in with zs fixed...
 
@@ -185,7 +187,7 @@ N = theta[...,0] # extract normalization parameter N = -2.5log10M + dm(z)
 model_fluxes = tf.concat([emulator.fluxes(transform(tf.gather(theta[...,1:], batch_indices[_], axis=0)), tf.gather(N, batch_indices[_], axis=0)) for _ in range(n_latent_batches)], axis=0)        
 
 # sample hyper-parameters, conditioned on latent parameters
-hyper_samples_ = affine_sample(log_hyperparameter_conditional, n_burnin_steps, hyper_current_state, args=[model_fluxes, fluxes, flux_variances, n_sigma_flux_cuts])
+hyper_samples_ = affine_sample(log_hyperparameter_conditional, 2000, hyper_current_state, args=[model_fluxes, fluxes, flux_variances, n_sigma_flux_cuts])
 hyper_current_state = tf.split(hyper_samples_[-1,...], (n_hyper_walkers, n_hyper_walkers), axis=0) # set current walkers state
 hyper_parameters_ = hyper_current_state[np.random.randint(0, 2)][np.random.randint(0, n_hyper_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
 
@@ -238,7 +240,7 @@ for step in range(n_steps):
 
     # sample latent parameters, conditioned on hyper-parameters (do it in batches and concatenate them together)
     latent_samples_ = tf.concat([affine_sample_batch_state(log_latentparameter_conditional, 
-                                                     n_sub_steps, 
+                                                     n_latent_sub_steps, 
                                                      [tf.gather(latent_current_state[0], batch_indices[_], axis=1), tf.gather(latent_current_state[1], batch_indices[_], axis=1)], 
                                                      args=[hyper_parameters_, tf.gather(fluxes, batch_indices[_], axis=0), tf.gather(flux_variances, batch_indices[_], axis=0), n_sigma_flux_cuts, tf.gather(zspec, batch_indices[_], axis=0), tf.gather(zprior_sig, batch_indices[_], axis=0), nz_parameters_], tensor=True) for _ in range(n_latent_batches)], axis=1)
     latent_current_state = tf.split(latent_samples_, (n_latent_walkers, n_latent_walkers), axis=0) # set current walkers state
@@ -250,12 +252,12 @@ for step in range(n_steps):
     model_fluxes = tf.concat([emulator.fluxes(transform(tf.gather(theta[...,1:], batch_indices[_], axis=0)), tf.gather(N, batch_indices[_], axis=0)) for _ in range(n_latent_batches)], axis=0)        
 
     # sample hyper-parameters, conditioned on latent parameters
-    hyper_samples_ = affine_sample(log_hyperparameter_conditional, n_sub_steps, hyper_current_state, args=[model_fluxes, fluxes, flux_variances, n_sigma_flux_cuts])
+    hyper_samples_ = affine_sample(log_hyperparameter_conditional, n_hyper_sub_steps, hyper_current_state, args=[model_fluxes, fluxes, flux_variances, n_sigma_flux_cuts])
     hyper_current_state = tf.split(hyper_samples_[-1,...], (n_hyper_walkers, n_hyper_walkers), axis=0) # set current walkers state
     hyper_parameters_ = hyper_current_state[np.random.randint(0, 2)][np.random.randint(0, n_hyper_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
 
     # sample the nz parameters
-    nz_samples_ = affine_sample(log_nz_conditional, n_sub_steps, nz_current_state, args=[tf.expand_dims(theta[...,-1], -1)])
+    nz_samples_ = affine_sample(log_nz_conditional, n_nz_sub_steps, nz_current_state, args=[tf.expand_dims(theta[...,-1], -1)])
     nz_current_state = tf.split(nz_samples_[-1,...], (n_nz_walkers, n_nz_walkers), axis=0)
     nz_parameters_ = nz_current_state[np.random.randint(0, 2)][np.random.randint(0, n_nz_walkers),...] 
     
