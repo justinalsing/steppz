@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 from tqdm import trange
 
-def affine_sample(log_prob, n_steps, current_state, args=[], progressbar=True):
+def affine_sample(log_prob, n_steps, current_state, args=[], progressbar=False):
     
     # split the current state
     current_state1, current_state2 = current_state
@@ -76,7 +76,7 @@ def affine_sample(log_prob, n_steps, current_state, args=[], progressbar=True):
     return tf.concat(chain, axis=0)
 
 # state variables have shape: (n_walkers, n_batch, n_params)
-def affine_sample_batch(log_prob, n_steps, current_state, args=[], progressbar=True):
+def affine_sample_batch(log_prob, n_steps, current_state, args=[], progressbar=False):
     
     # split the current state
     current_state1, current_state2 = current_state
@@ -151,7 +151,7 @@ def affine_sample_batch(log_prob, n_steps, current_state, args=[], progressbar=T
     return chain
 
 # state variables have shape: (n_walkers, n_batch, n_params)
-def affine_sample_batch_state(log_prob, n_steps, current_state, args=[], progressbar=True, tensor=False):
+def affine_sample_batch_state(log_prob, n_steps, current_state, args=[], progressbar=False, tensor=False):
     
     # split the current state
     current_state1, current_state2 = current_state
