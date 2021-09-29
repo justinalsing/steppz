@@ -138,7 +138,7 @@ def log_nz_conditional(theta, z):
                           components_distribution=tfd.SinhArcsinh(loc=locs, scale=tf.exp(logscales), skewness=skewness, tailweight=tailweight))
 
     # log prob
-    return tf.reduce_sum(nz.log_prob(z) - nz.log_survival_function(0.), axis=0) + tf.reduce_sum(nz_skewness_prior, axis=-1)
+    return tf.reduce_sum(nz.log_prob(z) - nz.log_survival_function(0.), axis=0) + tf.reduce_sum(nz_skewness_prior.log_prob(skewness), axis=-1)
 
 # initial walker states
 n_latent_walkers = 300
