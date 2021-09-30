@@ -55,6 +55,9 @@ transforms = [tfb.Identity() for _ in range(n_sps_parameters-1)]
 transforms[1] = tfb.Invert(tfb.Square()) # dust2 -> sqrt(dust2)
 transform = tfb.Blockwise(transforms)
 
+# prior on nz parameters
+nz_skewness_prior = tfd.Uniform(low=-0.01, high=1.0)
+
 # input shape of latent parameters should be (n_walkers, n_galaxies, n_sps_parameters), output shape should be (n_walkers, n_galaxies)
 @tf.function
 def log_latentparameter_conditional(latentparameters, hyperparameters, fluxes, flux_variances, n_sigma_flux_cuts, zspec, zprior_sig, nz_parameters):
@@ -135,7 +138,7 @@ def log_nz_conditional(theta, z):
                           components_distribution=tfd.SinhArcsinh(loc=locs, scale=tf.exp(logscales), skewness=skewness, tailweight=tailweight))
 
     # log prob
-    return tf.reduce_sum(nz.log_prob(z) - nz.log_survival_function(0.), axis=0)
+    return tf.reduce_sum(nz.log_prob(z) - nz.log_survival_function(0.), axis=0) + tf.reduce_sum(nz_skewness_prior.log_prob(skewness), axis=-1)
 
 # initial walker states
 n_latent_walkers = 300
