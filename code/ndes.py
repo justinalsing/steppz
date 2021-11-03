@@ -438,3 +438,116 @@ class AutoregressiveNeuralSplineFlow(tf.Module):
 
 		    pickle.dump([self._n_bins, self._n_dimensions, self._n_conditional, self._base_loc, self._base_scale, self._n_hidden, self._activation] + [tuple(variable.numpy() for variable in self.trainable_variables)], open(filename, 'wb'))
 
+class BinomialNetwork(tf.Module):
+    
+    def __init__(self, n_inputs=18, n_hidden=[10, 10], activation=tf.tanh, optimizer=tf.keras.optimizers.Adam(lr=1e-3), kernel_initializer=tf.keras.initializers.RandomNormal(mean=0.0, stddev=1e-5, seed=None), restore=False, restore_filename=None):
+        
+        # set up variables...
+
+        # load parameters if restoring saved model
+        if restore:
+            n_inputs, n_hidden, activation, loaded_trainable_variables = pickle.load(open(restore_filename, 'rb'))
+
+        # architecture
+        self.n_inputs = n_inputs
+        self.n_hidden = n_hidden
+        self.architecture = [n_inputs] + n_hidden + [1]
+        self.n_layers = len(self.architecture) - 1
+        self.activation = activation
+        self.activations = [activation for _ in range(self.n_layers-1)] + [tf.nn.sigmoid]
+        self.optimizer = optimizer
+        self.kernel_initializer = kernel_initializer
+        
+        # model
+        self.model = tf.keras.models.Sequential([tf.keras.layers.Dense(self.architecture[layer+1],
+                                                                  input_shape=(self.architecture[layer],),
+                                                                  activation=self.activations[layer],
+                                                                  kernel_initializer=self.kernel_initializer) for layer in range(self.n_layers)])
+
+
+        # call to initialize trainable variables
+        _ = self.__call__(tf.zeros((1, self.n_inputs)))
+        
+        # restore trainable variables if needed
+        if restore:
+            for model_variable, loaded_variable in zip(self.trainable_variables, loaded_trainable_variables):
+                model_variable.assign(loaded_variable)
+
+    # call model (log_prob)
+    @tf.function
+    def __call__(self, x):
+        
+        return self.model(x)
+
+    # loss
+    @tf.function
+    def loss(self, inputs, selected):
+        
+        p = tf.squeeze(self.__call__(inputs), -1)
+        return - tf.reduce_mean(selected * tf.math.log(p) + (1 - selected) * tf.math.log(1-p))
+    
+    # training step
+    @tf.function
+    def training_step(self, inputs, selected):
+        with tf.GradientTape() as tape:
+            loss = self.loss(inputs, selected)
+            gradients = tape.gradient(loss, self.trainable_variables)
+
+        self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+        return loss
+
+    # fit
+    def fit(self, data, validation_split=0.1, epochs=1000, batch_size=128, patience=20, progress_bar=True, save=False, filename=None):
+
+        # training data
+        inputs, selected = data
+
+        # split into validation and training sub-sets
+        n_validation = int(inputs.shape[0] * validation_split)
+        n_training = inputs.shape[0] - n_validation
+        training = tf.random.shuffle([True] * n_training + [False] * n_validation)
+        training_inputs = inputs[training]
+        training_selected = selected[training]
+        validation_inputs = inputs[~training]
+        validation_selected = selected[~training]
+
+        # create iterable dataset (given batch size)
+        training_data = tf.data.Dataset.from_tensor_slices((training_inputs, training_selected)).shuffle(n_training).batch(batch_size)
+
+        # set up training loss
+        training_loss = [np.infty]
+        validation_loss = [np.infty]
+        best_loss = np.infty
+        early_stopping_counter = 0
+
+        with trange(epochs) as t:
+            for epoch in t:
+
+                # loop over batches for a single epoch
+                for inputs_, selected_ in training_data:
+
+                    loss = self.training_step(inputs_, selected_)
+                    t.set_postfix(ordered_dict={'training loss':loss.numpy(), 'validation_loss':validation_loss[-1]}, refresh=True)
+
+                # compute total loss and validation loss
+                validation_loss.append(self.loss(validation_inputs, validation_selected).numpy())
+                training_loss.append(loss.numpy())
+
+                # update progress bar
+                t.set_postfix(ordered_dict={'training loss':loss.numpy(), 'validation_loss':validation_loss[-1]}, refresh=True)
+
+                # early stopping condition
+                if validation_loss[-1] < best_loss:
+                    best_loss = validation_loss[-1]
+                    early_stopping_counter = 0
+                    if save:
+                        self.save(filename)
+                else:
+                    early_stopping_counter += 1
+                if early_stopping_counter >= patience:
+                    break
+        return training_loss, validation_loss
+    
+    # save and restore
+    def save(self, filename):
+        pickle.dump([self.n_inputs, self.n_hidden, self.activation] + [tuple(variable.numpy() for variable in self.trainable_variables)], open(filename, 'wb'))
