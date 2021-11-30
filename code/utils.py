@@ -23,3 +23,9 @@ eta0_ = tf.constant(B0_*(1 + B1_ + B2_ + B3_ + B4_)**(-0.125), dtype=tf.float32)
 def distance_modulus(z):
 
   return 5*tf.math.log(1e6*A0_*(1+z)*(eta0_ - (B0_*((1+z)**4 + B1_*(1+z)**3 + B2_*(1+z)**2 + B3_*(1+z) + B4_)**(-0.125) )))/ln10_ - 5
+
+  # distance modulus fitting function
+@tf.function
+def dVdz(z):
+
+    return A0_ * z**2 * (eta0_ + (0.125 * B0_* ((1+z)**4 + B1_*(1+z)**3 + B2_*(1+z)**2 + B3_*(1+z) + B4_)**(-1.125) *  (4*(1+z)**3 + 3*B1_*(1+z)**2 + 2*B2_*(1+z) + B3_) ))
