@@ -60,10 +60,29 @@ def metallicity_mass_log_prob(log10Z, log10M):
 
     return - tf.multiply(0.5, tf.square(tf.divide(tf.subtract(log10Z, log10Z_mu), log10Z_sigma))) - tf.add(halfln2pi_, tf.math.log(log10Z_sigma)) - tf.math.log(tf.math.erf((0.19 - log10Z)/(tf.sqrt(2.)*log10Z_sigma)) - tf.math.erf((-1.98 - log10Z)/(tf.sqrt(2.)*log10Z_sigma)) )
 
+# Star forming main sequence SFR prior (Mizuki+2015)
+@tf.function
+def log10sSFRpriorMizuki(log10sSFR, z):
+
+    # star forming galaxies
+    mu_log10sSFR = tf.cast(z <= 2., tf.float32) * (2.1 * tf.math.log(1.+z)/ln10_ - 10.) + tf.cast(z > 2., tf.float32) * (1.5 * tf.math.log(1+z)/ln10_ - 11. + tf.math.log(19.)/ln10_)
+    sigma_log10sSFR = 0.3
+    
+    # quiescent galaxies (fixed peak)
+    mu_log10sSFR_Q = -11.8
+    sigma_log10sSFR_Q = 0.36
+    
+    return tf.math.log(0.5 * tf.exp(-0.5 * (log10sSFR - mu_log10sSFR)**2 / sigma_log10sSFR**2 - 0.5 * tf.math.log(2*np.pi*sigma_log10sSFR**2)) + 0.5 * tf.exp(-0.5 * (log10sSFR - mu_log10sSFR_Q)**2 / sigma_log10sSFR_Q**2 - 0.5 * tf.math.log(2*np.pi*sigma_log10sSFR_Q**2)) + 1e-32)
+
+# volume redshift prior
+@tf.function
+def redshift_volume_prior(z):
+
+    return tf.math.log(dVdz(z))
 
 class ProspectorAlphaBaselinePrior:
     
-    def __init__(self):
+    def __init__(self, baselineSFRprior=None, log10sSFRemulator=None, log10sSFRprior=None, log10sSFRuniformlimits=None, redshift_prior=None):
         
         # parameters and limits
         self.n_sps_parameters = 15
@@ -81,8 +100,17 @@ class ProspectorAlphaBaselinePrior:
 
         # mass limits prior
         self.massLimitsPrior = tfd.Uniform(low=7., high=13.)
+
+        # star formation history parameters prior: import conditional density estimator model for P(SFH | z)
+        self.baselineSFRprior = baselineSFRprior
+        self.log10sSFRemulator = log10sSFRemulator
+        self.log10sSFRprior = log10sSFRprior
+        self.log10sSFRuniformlimits = log10sSFRuniformlimits
+
+        # redshift prior
+        self.redshift_prior = redshift_prior
         
-    @tf.function
+    #@tf.function
     def log_prob(self, latentparameters):
         
         # convert parameters...
@@ -96,6 +124,9 @@ class ProspectorAlphaBaselinePrior:
         # convert normalization and redshift to logmass
         log10M = (N - distance_modulus(tf.math.maximum(1e-5, z)))/-2.5
 
+        # stacked SFH parameters
+        sfh = tf.concat([logsfr_ratios, log10Z, z], axis=-1)
+
         # compute prior log density...
         
         # initialise log target density to baseline prior (unit normal prior on unconstrained parameters: NB not applied to normalization parameter N which is not bijected)
@@ -108,7 +139,7 @@ class ProspectorAlphaBaselinePrior:
         logp = logp + metallicity_mass_log_prob(log10Z, log10M)
 
         # logsfr ratio priors (student's-t with 2 d.o.f)
-        logp = logp + tf.reduce_sum(tf.multiply(-1.5, tf.math.log(tf.add(1., tf.multiply(0.5, tf.square(tf.divide(logsfr_ratios, 0.3)))))), axis=-1)
+        logp = logp + tf.reduce_sum(tf.multiply(-1.5, tf.math.log(tf.add(1., tf.multiply(0.5, tf.square(tf.divide(logsfr_ratios, 0.3)))))), axis=-1, keepdims=True)
 
         # dust2 prior
         logp = logp - tf.multiply(0.5, tf.square(tf.divide(tf.subtract(dust2, 0.3), 1.0)))
@@ -128,10 +159,24 @@ class ProspectorAlphaBaselinePrior:
         # gas logZ prior
         ### uniform only ###
 
-        # z prior
-        ### uniform only ###
+        # squeeze
+        logp = tf.squeeze(logp, axis=-1)
 
-        return tf.squeeze(logp, axis=-1)
+        # SFR prior
+        if self.baselineSFRprior is not None:
+
+            log10sSFR = tf.squeeze(self.log10sSFRemulator(sfh), -1)
+            baseline_SFR_prior_logprob = tf.squeeze(self.baselineSFRprior(tf.expand_dims(log10sSFR, -1)), -1) # returns log prob
+            target_SFR_prior_logprob = self.log10sSFRprior(log10sSFR, tf.squeeze(z)) # returns log prob
+            uniform_SFR_limits = self.log10sSFRuniformlimits.log_prob(log10sSFR)
+
+            logp = logp + target_SFR_prior_logprob - baseline_SFR_prior_logprob + uniform_SFR_limits
+
+        # z prior
+        if self.redshift_prior is not None:
+            logp = logp + tf.squeeze(self.redshift_prior(z), -1)
+
+        return logp
         
 
 class ModelHMIBaselinePrior:
@@ -261,13 +306,13 @@ class ModelHMIIBaselinePrior:
 
 class ModelABBaselinePrior:
     
-    def __init__(self, SFHPrior=None):
+    def __init__(self, baselineSFRprior=None, log10sSFRemulator=None, log10sSFRprior=None, log10sSFRuniformlimits=None, redshift_prior=None):
         
         # parameters and limits
         self.n_sps_parameters = 9
         self.parameter_names = ['N', 'log10Z', 'dust2', 'dust1_fraction', 'dust_index', 'log10alpha', 'log10beta', 'tau', 'z']
-        self.lower = tf.constant([7., -1.98, 0., 0., -1., -1., -1., 0.1, 1e-5], dtype=tf.float32)
-        self.upper = tf.constant([13., 0.19, 4., 2., 0.4, 3., 3., 13.78, 2.5], dtype=tf.float32)
+        self.lower = tf.constant([7., -1.98, 0., 0., -1., -1., -1., 0.007, 1e-5], dtype=tf.float32)
+        self.upper = tf.constant([13., 0.19, 4., 2., 0.4, 3., 3., 1., 2.5], dtype=tf.float32)
 
         # bijector from constrained parameter (physical) to unconstrained space for sampling. 
         # note: no bijector for the normalization parameter N (since it is already unconstrained)
@@ -281,9 +326,15 @@ class ModelABBaselinePrior:
         self.massLimitsPrior = tfd.Uniform(low=7., high=13.)
 
         # star formation history parameters prior: import conditional density estimator model for P(SFH | z)
-        self.SFHPrior = SFHPrior
-        
-    @tf.function
+        self.baselineSFRprior = baselineSFRprior
+        self.log10sSFRemulator = log10sSFRemulator
+        self.log10sSFRprior = log10sSFRprior
+        self.log10sSFRuniformlimits = log10sSFRuniformlimits
+
+        # redshift prior
+        self.redshift_prior = redshift_prior
+
+    #@tf.function
     def log_prob(self, latentparameters):
         
         # convert parameters...
@@ -292,10 +343,10 @@ class ModelABBaselinePrior:
         theta = self.bijector(latentparameters)
 
         # split up the parameters to make things easier to read
-        N, log10Z, dust2, dust1_fraction, dust_index, sfh, z = tf.split(theta, (1, 1, 1, 1, 1, 3, 1), axis=-1)
+        N, log10Z, dust2, dust1_fraction, dust_index, sfh_, z = tf.split(theta, (1, 1, 1, 1, 1, 3, 1), axis=-1)
 
         # latent version of SFH parameters
-        latent_sfh = latentparameters[..., 5:8]
+        sfh = tf.concat([sfh_, z], axis=-1)
         
         # convert normalization and redshift to logmass
         log10M = (N - distance_modulus(tf.math.maximum(1e-5, z)))/-2.5
@@ -303,7 +354,7 @@ class ModelABBaselinePrior:
         # compute prior log density...
         
         # initialise log target density to baseline prior (unit normal prior on unconstrained parameters: NB not applied to normalization parameter N which is not bijected)
-        logp = tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,1:5]), axis=-1, keepdims=True) + tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,8:]), axis=-1, keepdims=True)
+        logp = tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,1:]), axis=-1, keepdims=True)
         
         # logmass prior
         logp = logp + mass_function_log_prob(log10M, z) + self.massLimitsPrior.log_prob(log10M)
@@ -324,12 +375,16 @@ class ModelABBaselinePrior:
         logp = tf.squeeze(logp, axis=-1)
 
         # SFH prior
-        if self.SFHPrior is not None:
-            if len(latent_sfh.shape) > 2:
-                dims = latent_sfh.shape[:-1]
-                size = tf.math.reduce_prod(dims)
-                logp = logp + tf.reshape(self.SFHPrior.log_prob(tf.reshape(latent_sfh, [size, 3]), tf.reshape(z, [size, 1]) ), dims)
-            else:
-                logp = logp + self.SFHPrior.log_prob(latent_sfh, z)
+        if self.baselineSFRprior is not None:
+
+            log10sSFR = tf.squeeze(self.log10sSFRemulator(sfh), -1)
+            baseline_SFR_prior_logprob = tf.squeeze(self.baselineSFRprior(tf.concat([tf.expand_dims(log10sSFR, -1), z], -1)), -1) # returns log prob
+            target_SFR_prior_logprob = self.log10sSFRprior(log10sSFR, tf.squeeze(z)) # returns log prob
+            uniform_SFR_limits = self.log10sSFRuniformlimits.log_prob(log10sSFR)
+
+            logp = logp + target_SFR_prior_logprob - baseline_SFR_prior_logprob + uniform_SFR_limits
+
+        if self.redshift_prior is not None:
+            logp = logp + tf.squeeze(self.redshift_prior(z), -1)
 
         return logp
