@@ -146,11 +146,12 @@ n_hyper_walkers = 500
 n_nz_walkers = 500
 
 # initialize latent
-latent_current_state = [tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[0:n_latent_walkers,:,:].astype(np.float32), dtype=tf.float32), tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[n_latent_walkers:2*n_latent_walkers,:,:].astype(np.float32), dtype=tf.float32)]
+#latent_current_state = [tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[0:n_latent_walkers,:,:].astype(np.float32), dtype=tf.float32), tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[n_latent_walkers:2*n_latent_walkers,:,:].astype(np.float32), dtype=tf.float32)]
+latent_current_state = [tf.convert_to_tensor(tf.expand_dims(Prior.bijector.inverse(parameters.astype(np.float32)), 0).numpy() + tf.random.normal([n_latent_walkers, parameters.shape[0], parameters.shape[1]], 0, 1e-3).numpy(), dtype=tf.float32), tf.convert_to_tensor(tf.expand_dims(Prior.bijector.inverse(parameters.astype(np.float32)), 0).numpy() + tf.random.normal([n_latent_walkers, parameters.shape[0], parameters.shape[1]], 0, 1e-3).numpy(), dtype=tf.float32)]
 
 # initialize hyper-parameters
-#hyper_parameters_ = tf.concat([tf.ones(9, dtype=tf.float32), tf.math.log(model_error + zp_error)], axis=-1)
-hyper_parameters_ = tf.convert_to_tensor(np.array([ 0.98359346, 1.0160451, 0.9716604, 1.0174508, 1.0464727, 0.96167755, 0.9633688 ,  1.0043944 ,  1.0555319 , -2.698502  ,-3.623595  , -3.618765  , -3.7967343 , -3.889239  , -4.1963024 , -3.606665  , -3.7647383 , -3.570438  ]), dtype=tf.float32)
+hyper_parameters_ = tf.concat([tf.ones(9, dtype=tf.float32), tf.math.log(model_error + zp_error)], axis=-1)
+#hyper_parameters_ = tf.convert_to_tensor(np.array([ 0.98359346, 1.0160451, 0.9716604, 1.0174508, 1.0464727, 0.96167755, 0.9633688 ,  1.0043944 ,  1.0555319 , -2.698502  ,-3.623595  , -3.618765  , -3.7967343 , -3.889239  , -4.1963024 , -3.606665  , -3.7647383 , -3.570438  ]), dtype=tf.float32)
 hyper_current_state = [hyper_parameters_ + tf.random.normal([n_hyper_walkers, hyper_parameters_.shape[0]], 0, 1e-3), hyper_parameters_ + tf.random.normal([n_hyper_walkers, hyper_parameters_.shape[0]], 0, 1e-3)]
 
 # initialize n(z)
