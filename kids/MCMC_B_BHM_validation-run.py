@@ -44,7 +44,7 @@ baseline_SFR_prior_log_prob = RegressionNetwork(restore=True, restore_filename='
 sps_prior = ModelABBaselinePrior(baselineSFRprior=baseline_SFR_prior_log_prob, 
                              log10sSFRemulator=log10sSFR_emulator, 
                              log10sSFRprior=log10sSFRpriorMizuki, 
-                             log10sSFRuniformlimits=tfd.Uniform(low=-14, high=-7), 
+                             log10sSFRuniformlimits=tfd.Uniform(low=-14, high=-7.5), 
                              redshift_prior=redshift_volume_prior)
 n_sps_parameters = sps_prior.n_sps_parameters
 
