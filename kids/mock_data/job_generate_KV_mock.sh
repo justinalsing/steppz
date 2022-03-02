@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-#SBATCH -J B_BHM
+#SBATCH -J generate_KV
 #SBATCH -t 24:00:00
 #SBATCH -A cops
 #SBATCH -p ampere
@@ -16,4 +16,4 @@ ulimit -s unlimited  # Unlimited stack
 ulimit -u 16000      # Increase max number of tasks
 ulimit -n 65536      # Increase max number of open files
 
-python3 MCMC_B_BHM_validation-run.py
+python3 generate_KV-like_mock.py $1 $2
