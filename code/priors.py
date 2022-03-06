@@ -80,6 +80,20 @@ def redshift_volume_prior(z):
 
     return tf.math.log(dVdz(z))
 
+@tf.function
+def curtiFMR(log10Z, log10M, log10sSFR):
+
+	Z0 = 8.78
+    gamma = 0.3
+    m0 = 10.1
+    m1 = 0.56
+    beta = 2.1
+
+	mean = Z0 - (gamma / beta) * tf.math.log(1 + 10**(-beta*(log10M - (m0 + m1 * (log10sSFR + log10M)) ))) / ln10_ - 8.69
+	sigma = 0.06
+
+	return -0.5 * (log10Z - mean)**2 / sigma**2
+
 class ProspectorAlphaBaselinePrior:
     
     def __init__(self, baselineSFRprior=None, log10sSFRemulator=None, log10sSFRprior=None, log10sSFRuniformlimits=None, redshift_prior=None):
@@ -306,7 +320,7 @@ class ModelHMIIBaselinePrior:
 
 class ModelABBaselinePrior:
     
-    def __init__(self, baselineSFRprior=None, log10sSFRemulator=None, log10sSFRprior=None, log10sSFRuniformlimits=None, redshift_prior=None):
+    def __init__(self, baselineSFRprior=None, log10sSFRemulator=None, log10sSFRprior=None, log10sSFRuniformlimits=None, redshift_prior=None, FMRprior='gallazzi'):
         
         # parameters and limits
         self.n_sps_parameters = 9
@@ -331,8 +345,9 @@ class ModelABBaselinePrior:
         self.log10sSFRprior = log10sSFRprior
         self.log10sSFRuniformlimits = log10sSFRuniformlimits
 
-        # redshift prior
+        # extra priors
         self.redshift_prior = redshift_prior
+        self.FMRprior = FMRprior
 
     #@tf.function
     def log_prob(self, latentparameters):
@@ -360,7 +375,8 @@ class ModelABBaselinePrior:
         logp = logp + mass_function_log_prob(log10M, z) + self.massLimitsPrior.log_prob(log10M)
 
         # metallicity prior
-        logp = logp + metallicity_mass_log_prob(log10Z, log10M)
+        if self.FMRprior is 'gallazzi':
+        	logp = logp + metallicity_mass_log_prob(log10Z, log10M)
 
         # dust2 prior
         logp = logp - tf.multiply(0.5, tf.square(tf.divide(tf.subtract(dust2, 0.3), 1.0)))
@@ -386,5 +402,9 @@ class ModelABBaselinePrior:
 
         if self.redshift_prior is not None:
             logp = logp + tf.squeeze(self.redshift_prior(z), -1)
+
+        if self.FMRprior == 'curti':
+        	log10sSFR = self.log10sSFRemulator(sfh)
+        	logp = logp + tf.squeeze(curtiFMR(log10Z, log10M, log10sSFR), -1)
 
         return logp

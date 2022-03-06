@@ -42,8 +42,14 @@ filenames = ['model_{}x{}'.format(n_layers, n_hidden) + filtername for filternam
 emulator = PhotulatorModelStack(root_dir=root_dir, filenames=filenames)
 
 # prior limits and associated hard priors
-sfh_prior = AutoregressiveNeuralSplineFlow(restore=True, restore_filename='/cfs/home/alju5794/steppz/sps_models/model_B/NSF_DPL_SFH.pkl')
-sps_prior = ModelABBaselinePrior(SFHPrior=sfh_prior)
+log10sSFR_emulator = RegressionNetwork(restore=True, restore_filename='/cfs/home/alju5794/steppz/sps_models/model_B/DPL_log10sSFR_emulator.pkl')
+baseline_SFR_prior_log_prob = RegressionNetwork(restore=True, restore_filename='/cfs/home/alju5794/steppz/sps_models/model_B/DPL_baseline_SFR_prior_logprob.pkl')
+sps_prior = ModelABBaselinePrior(baselineSFRprior=baseline_SFR_prior_log_prob, 
+                             log10sSFRemulator=log10sSFR_emulator, 
+                             log10sSFRprior=log10sSFRpriorMizuki, 
+                             log10sSFRuniformlimits=tfd.Uniform(low=-14, high=-7.5), 
+                             redshift_prior=redshift_volume_prior,
+                             FMRprior='curti')
 n_sps_parameters = sps_prior.n_sps_parameters
 
 # bijector from constrained parameter (physical) to unconstrained space for sampling. Note: no bijector for the normalization parameter N
@@ -91,19 +97,19 @@ def log_latentparameter_conditional(latentparameters, hyperparameters, fluxes, f
     # extra redshift prior from n(z)...
 
     # parameters
-    logits, locs, logscales, skewness, tailweight = tf.split(nz_parameters, (3, 3, 3, 3, 3), axis=-1)
+    #logits, locs, logscales, skewness, tailweight = tf.split(nz_parameters, (3, 3, 3, 3, 3), axis=-1)
 
     # mixture model
-    nz = tfd.MixtureSameFamily(mixture_distribution=tfd.Categorical(logits=logits),
-                          components_distribution=tfd.SinhArcsinh(loc=locs, scale=tf.exp(logscales), skewness=skewness, tailweight=tailweight))
+    #nz = tfd.MixtureSameFamily(mixture_distribution=tfd.Categorical(logits=logits),
+    #                      components_distribution=tfd.SinhArcsinh(loc=locs, scale=tf.exp(logscales), skewness=skewness, tailweight=tailweight))
 
     # redshift prior
-    log_z_prior_ = nz.log_prob(z) - nz.log_survival_function(0.)
+    #log_z_prior_ = nz.log_prob(z) - nz.log_survival_function(0.)
 
     # redshift selection
-    log_z_selection_ = tf.math.log(tf.math.square(z) + 1e-10) - (nz_fiducial.log_prob(z) - nz.log_survival_function(0.))
+    #log_z_selection_ = tf.math.log(tf.math.square(z) + 1e-10) - (nz_fiducial.log_prob(z) - nz.log_survival_function(0.))
     
-    return log_likelihood_ + log_prior_ + log_specz_prior_ + log_z_prior_ + log_z_selection_
+    return log_likelihood_ + log_prior_ + log_specz_prior_# + log_z_prior_ + log_z_selection_
 
 # input shape of hyperparameters should be (n_walkers, n_hyperparameters), output shape should be (n_walkers)
 @tf.function
