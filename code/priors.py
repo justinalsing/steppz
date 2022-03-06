@@ -82,17 +82,15 @@ def redshift_volume_prior(z):
 
 @tf.function
 def curtiFMR(log10Z, log10M, log10sSFR):
-
-	Z0 = 8.78
+    Z0 = 8.78
     gamma = 0.3
     m0 = 10.1
     m1 = 0.56
     beta = 2.1
+    mean = Z0 - (gamma / beta) * tf.math.log(1 + 10**(-beta*(log10M - (m0 + m1 * (log10sSFR + log10M)) ))) / ln10_ - 8.69
+    sigma = 0.06
 
-	mean = Z0 - (gamma / beta) * tf.math.log(1 + 10**(-beta*(log10M - (m0 + m1 * (log10sSFR + log10M)) ))) / ln10_ - 8.69
-	sigma = 0.06
-
-	return -0.5 * (log10Z - mean)**2 / sigma**2
+    return -0.5 * (log10Z - mean)**2 / sigma**2
 
 class ProspectorAlphaBaselinePrior:
     
