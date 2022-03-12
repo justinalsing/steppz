@@ -10,8 +10,8 @@ from likelihoods import *
 # import training data
 
 # import the mags and thetas
-training_theta = np.concatenate([np.load('/cfs/home/alju5794/steppz/sps_models/model_B/training_data/parameters/parameters{}.npy'.format(i)) for i in range(32)], axis=0)
-training_mags = np.concatenate([np.load('/cfs/home/alju5794/steppz/sps_models/model_B/training_data/photometry/KV_photometry{}.npy'.format(i)).astype(np.float32) for i in range(32)], axis=0) # units: nanomaggies
+training_theta = np.concatenate([np.load('/cfs/home/alju5794/steppz/sps_models/model_B/training_data_prior/parameters/parameters{}.npy'.format(i)) for i in range(32)], axis=0)
+training_mags = np.concatenate([np.load('/cfs/home/alju5794/steppz/sps_models/model_B/training_data_prior/photometry/KV_photometry{}.npy'.format(i)).astype(np.float32) for i in range(32)], axis=0)
 
 # transform to normalization parameter
 training_theta[:,0] = -2.5*training_theta[:,0] + distance_modulus(training_theta[:,-1].astype(np.float32))
@@ -28,7 +28,7 @@ model_error = tf.constant([0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03]
 zp_error = tf.constant([0.05, 0.01, 0.01, 0.01, 0.03, 0.03, 0.03, 0.03, 0.03], dtype=tf.float32)
 
 # import data
-fluxes, flux_sigmas, zspec, specsource, zb, zprior_sig = pickle.load(open('/cfs/home/alju5794/steppz/kids/data/KV450_cut_all.pkl', 'rb'))
+fluxes, flux_sigmas, zspec, specsource, zb, zprior_sig = pickle.load(open('/cfs/home/alju5794/steppz/kids/data/KV1000_cut_all.pkl', 'rb'))
 
 # training data cuts
 fmin = fluxes.min(axis=0)
@@ -38,13 +38,21 @@ training_flux = training_flux[~cut,:]
 training_theta = training_theta[~cut,:]
 
 # prior
-prior = ModelABBaselinePrior()
+log10sSFR_emulator = RegressionNetwork(restore=True, restore_filename='/cfs/home/alju5794/steppz/sps_models/model_B/DPL_log10sSFR_emulator.pkl')
+baseline_SFR_prior_log_prob = RegressionNetwork(restore=True, restore_filename='/cfs/home/alju5794/steppz/sps_models/model_B/DPL_baseline_SFR_prior_logprob.pkl')
+prior = ModelABBaselinePrior(baselineSFRprior=baseline_SFR_prior_log_prob,
+                             log10sSFRemulator=log10sSFR_emulator,
+                             log10sSFRprior=log10sSFRpriorMizuki,
+                             log10sSFRuniformlimits=tfd.Uniform(low=-14, high=-7.5),
+                             redshift_prior=redshift_volume_prior,
+                             FMRprior='curti')
+
 
 # biject the parameters
 training_phi = prior.bijector.inverse(training_theta).numpy()
 
 # cut out nans
-cut = np.isnan(training_phi).any(axis=1) + np.isinf(training_phi).any(axis=1)
+cut = np.isnan(training_phi).any(axis=1) + np.isinf(training_phi).any(axis=1) + np.isinf(prior.log_prob(training_phi).numpy()) + np.isnan(prior.log_prob(training_phi).numpy())
 training_flux = training_flux[~cut,:]
 training_theta = training_theta[~cut,:]
 training_phi = training_phi[~cut,:]
@@ -64,7 +72,7 @@ for i in range(fluxes.shape[0]):
     
     fluxes_ = tf.expand_dims(fluxes[i,:], 0)
     predicted_flux_variances_ = flux_sigmas[i,:]**2 + extra_flux_variance_
-    logl = log_likelihood_studentst2(fluxes_, predicted_fluxes_, predicted_flux_variances_, tf.ones(9, dtype=tf.float32))
+    logl = log_likelihood_studentst2(fluxes_, flux_sigmas[i,:]**2, predicted_fluxes_, predicted_flux_variances_)
     argmax = tf.math.argmax(logl, axis=0)
     estimator_phi[i,:] = training_phi[argmax,:]
     estimator_theta[i,:] = training_theta[argmax,:]
@@ -82,6 +90,7 @@ for i in range(estimator_phi.shape[0]):
 
 	# phi walkers
     walkers[:,i,:] = estimator_phi[i,:] + np.random.normal(0, 0.05, size=(n_walkers, estimator_phi.shape[1]))
+    walkers[:,i,-1] = estimator_phi[i,-1] + np.random.normal(0, 1e-3, n_walkers)
 
     # mass estimator
     log10M_0 = (estimator_theta[i,0] - distance_modulus(tf.math.maximum(1e-5, estimator_theta[i,-1])).numpy())/-2.5

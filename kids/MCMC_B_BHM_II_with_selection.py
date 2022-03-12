@@ -22,7 +22,7 @@ model_error = tf.constant([0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03]
 zp_error = tf.constant([0.05, 0.01, 0.01, 0.01, 0.03, 0.03, 0.03, 0.03, 0.03], dtype=tf.float32)
 
 # import data
-fluxes, flux_sigmas, zspec, specsource, zb, zprior_sig = pickle.load(open('/cfs/home/alju5794/steppz/kids/data/KV450_cut_all.pkl', 'rb'))
+fluxes, flux_sigmas, zspec, specsource, zb, zprior_sig = pickle.load(open('/cfs/home/alju5794/steppz/kids/data/KV1000_cut_all.pkl', 'rb'))
 
 # convert to tensors
 flux_variances = tf.constant(np.atleast_2d(flux_sigmas**2).astype(np.float32), dtype=tf.float32)
@@ -86,7 +86,7 @@ def log_latentparameter_conditional(latentparameters, hyperparameters, fluxes, f
     predicted_flux_variances = tf.add(flux_variances, tf.square(tf.multiply(additive_fractional_errors, predicted_fluxes)))
 
     # log likelihood
-    log_likelihood_ = log_likelihood_studentst2(fluxes, flux_variances, predicted_fluxes, predicted_flux_variances, n_sigma_flux_cuts)
+    log_likelihood_ = log_likelihood_studentst2(fluxes, flux_variances, predicted_fluxes, predicted_flux_variances)
     
     # log-prior
     log_prior_ = sps_prior.log_prob(latentparameters)
@@ -127,7 +127,7 @@ def log_hyperparameter_conditional(hyperparameters, model_fluxes, fluxes, flux_v
     predicted_flux_variances = tf.add(flux_variances, tf.square(tf.multiply(additive_fractional_errors, predicted_fluxes)))
 
     # log likelihoods
-    log_likelihood_ = log_likelihood_studentst2(fluxes, flux_variances, predicted_fluxes, predicted_flux_variances, n_sigma_flux_cuts)
+    log_likelihood_ = log_likelihood_studentst2(fluxes, flux_variances, predicted_fluxes, predicted_flux_variances)
     
     # log prior
     #log_prior_ = hyperparameter_log_prior(hyperparameters)
