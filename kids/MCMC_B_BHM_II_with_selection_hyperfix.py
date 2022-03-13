@@ -127,7 +127,7 @@ def log_hyperparameter_conditional(hyperparameters, model_fluxes, fluxes, flux_v
     # ignore any nans
     log_likelihood_ = tf.where(tf.math.is_nan(log_likelihood_), 0., log_likelihood_)
 
-    return tf.reduce_sum(log_likelihood_, axis=-1) + log_prior
+    return tf.reduce_sum(log_likelihood_, axis=-1) + log_prior_
 
 @tf.function
 def log_nz_conditional(theta, z):
