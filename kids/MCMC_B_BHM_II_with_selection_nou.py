@@ -112,7 +112,7 @@ def log_hyperparameter_conditional(hyperparameters, model_fluxes, fluxes, flux_v
     predicted_flux_variances = tf.add(flux_variances, tf.square(tf.multiply(additive_fractional_errors, predicted_fluxes)))
 
     # log likelihoods
-    log_likelihood_ = log_likelihood_studentst2(fluxes, flux_variances, predicted_fluxes, predicted_flux_variances)
+    log_likelihood_ = log_likelihood_studentst2(fluxes, predicted_fluxes, predicted_flux_variances)
     
     # log prior
     #log_prior_ = hyperparameter_log_prior(hyperparameters)
