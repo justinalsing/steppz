@@ -142,14 +142,15 @@ n_nz_walkers = 500
 
 # initialize latent
 if burnin is False:
-    initial_latent_chain = np.load('/cfs/home/alju5794/steppz/kids/initializations/latent1.npy').astype(np.float32)[...,[1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17]]
+    initial_latent_chain = np.load('/cfs/home/alju5794/steppz/kids/initializations/latent1.npy').astype(np.float32)
     latent_current_state = [sps_prior.bijector.inverse(initial_latent_chain[0:n_latent_walkers,...]), sps_prior.bijector.inverse(initial_latent_chain[n_latent_walkers:2*n_latent_walkers,...])] 
 else:
     latent_current_state = [tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[0:n_latent_walkers,:,:].astype(np.float32), dtype=tf.float32), tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[n_latent_walkers:2*n_latent_walkers,:,:].astype(np.float32), dtype=tf.float32)]
 
 # initialize hyper-parameters
 if burnin is False:
-    initial_hyper_chain = np.load('/cfs/home/alju5794/steppz/kids/initializations/hyper0.npy').astype(np.float32)
+    initial_hyper_chain = np.load('/cfs/home/alju5794/steppz/kids/initializations/hyper0.npy').astype(np.float32)[...,[1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17]]
+    initial_hyper_chain[:,0:8] = 1. + initial_hyper_chain[:,0:8] - np.mean(initial_hyper_chain[:,0:8], axis=0)
     hyper_parameters_ = tf.convert_to_tensor(initial_hyper_chain[0,:], dtype=tf.float32)
     hyper_current_state = [tf.convert_to_tensor(initial_hyper_chain[0:n_hyper_walkers,...], dtype=tf.float32), tf.convert_to_tensor(initial_hyper_chain[n_hyper_walkers:2*n_hyper_walkers,...], dtype=tf.float32)]
 else:
