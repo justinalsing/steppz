@@ -12,6 +12,9 @@ from likelihoods import *
 from affine import *
 from ndes import *
 
+# thinning
+n_thin = 10
+
 # burn-in or not?
 burnin = False
 
@@ -222,8 +225,8 @@ if burnin is True:
     nz_parameters_ = nz_current_state[np.random.randint(0, 2)][np.random.randint(0, n_nz_walkers),...] 
 
     # save the chain
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_with_selection/latent{}.npy'.format(0), sps_prior.bijector(latent_samples_).numpy().astype(np.float32) )
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_with_selection/z{}.npy'.format(0), sps_prior.bijector(latent_samples_).numpy()[...,-1].astype(np.float32) )
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_with_selection/latent{}.npy'.format(0), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),...] )
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_with_selection/z{}.npy'.format(0), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),:,-1] )
     np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_with_selection/hyper{}.npy'.format(0), hyper_samples_[-1,...].numpy().astype(np.float32))
     np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_with_selection/nz{}.npy'.format(0), nz_samples_[-1,...].numpy().astype(np.float32))
 
@@ -253,8 +256,8 @@ if burnin is True:
     nz_parameters_ = nz_current_state[np.random.randint(0, 2)][np.random.randint(0, n_nz_walkers),...] 
 
     # save the chain
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_with_selection/latent{}.npy'.format(1), sps_prior.bijector(latent_samples_).numpy().astype(np.float32) )
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_with_selection/z{}.npy'.format(1), sps_prior.bijector(latent_samples_).numpy()[...,-1].astype(np.float32) )
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_with_selection/latent{}.npy'.format(1), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),...] )
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_with_selection/z{}.npy'.format(1), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),:,-1]  )
     np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_with_selection/hyper{}.npy'.format(1), hyper_samples_[-1,...].numpy().astype(np.float32))
     np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_with_selection/nz{}.npy'.format(1), nz_samples_[-1,...].numpy().astype(np.float32))
 
@@ -287,8 +290,8 @@ for step in range(n_steps):
     nz_parameters_ = nz_current_state[np.random.randint(0, 2)][np.random.randint(0, n_nz_walkers),...] 
     
     # save the chain
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_with_selection/latent{}.npy'.format(step+2), sps_prior.bijector(latent_samples_).numpy().astype(np.float32) )
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_with_selection/z{}.npy'.format(step+2), sps_prior.bijector(latent_samples_).numpy()[...,-1].astype(np.float32) )
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_with_selection/latent{}.npy'.format(step+2), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),...] )
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_with_selection/z{}.npy'.format(step+2), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),:,-1] )
     np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_with_selection/hyper{}.npy'.format(step+2), hyper_samples_[-1,...].numpy().astype(np.float32))
     np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_with_selection/nz{}.npy'.format(step+2), nz_samples_[-1,...].numpy().astype(np.float32))
 
