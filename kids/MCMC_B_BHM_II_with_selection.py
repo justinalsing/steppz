@@ -13,7 +13,7 @@ from affine import *
 from ndes import *
 
 # thinning
-n_thin = 10
+n_thin = 20
 
 # burn-in or not?
 burnin = False
@@ -28,17 +28,15 @@ model_error = tf.constant([0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03]
 zp_error = tf.constant([0.05, 0.01, 0.01, 0.01, 0.03, 0.03, 0.03, 0.03, 0.03], dtype=tf.float32)
 
 # import data
-fluxes, flux_sigmas, zspec, specsource, zb, zprior_sig = pickle.load(open('/cfs/home/alju5794/steppz/kids/data/KV1000_cut_all.pkl', 'rb'))
+fluxes, flux_sigmas, zspec, specsource, zb, zprior_sig = pickle.load(open('/cfs/home/alju5794/steppz/kids/data/KV1000_GAMA_cut_all.pkl', 'rb'))
 
 # convert to tensors
 flux_variances = tf.constant(np.atleast_2d(flux_sigmas**2).astype(np.float32), dtype=tf.float32)
 fluxes = tf.constant(np.atleast_2d(fluxes).astype(np.float32), dtype=tf.float32)
 zspec = tf.constant(zspec.astype(np.float32), dtype=tf.float32)
 zprior_sig = tf.constant(zprior_sig.astype(np.float32), dtype=tf.float32)
-zprior_sig_fixed = tf.ones(zprior_sig.shape, dtype=tf.float32)*1e-3
-
-# n_sigma_flux_cuts
-n_sigma_flux_cuts = tf.constant([1., 1., 3., 1., 0., 0., 0., 0., 0.], dtype=tf.float32)
+zprior_sig_fixed = tf.ones(zprior_sig.shape, dtype=tf.float32)*0.01
+zprior_sig[zprior_sig < 1.] = 0.01
 
 n_layers = 4
 n_hidden = 128
@@ -142,7 +140,7 @@ def log_nz_conditional(theta, z):
     return tf.reduce_sum(nz.log_prob(z) - nz.log_survival_function(0.), axis=0)# + tf.reduce_sum(nz_skewness_prior.log_prob(skewness), axis=-1)
 
 # initial walker states
-n_latent_walkers = 300
+n_latent_walkers = 400
 n_hyper_walkers = 500
 n_nz_walkers = 500
 
@@ -151,7 +149,7 @@ if burnin is False:
     initial_latent_chain = np.load('/cfs/home/alju5794/steppz/kids/initializations/latent1.npy').astype(np.float32)
     latent_current_state = [sps_prior.bijector.inverse(initial_latent_chain[0:n_latent_walkers,...]), sps_prior.bijector.inverse(initial_latent_chain[n_latent_walkers:2*n_latent_walkers,...])] 
 else:
-    latent_current_state = [tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[0:n_latent_walkers,:,:].astype(np.float32), dtype=tf.float32), tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[n_latent_walkers:2*n_latent_walkers,:,:].astype(np.float32), dtype=tf.float32)]
+    latent_current_state = [tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi_GAMA.npy')[0:n_latent_walkers,:,:].astype(np.float32), dtype=tf.float32), tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[n_latent_walkers:2*n_latent_walkers,:,:].astype(np.float32), dtype=tf.float32)]
 
 # initialize hyper-parameters
 if burnin is False:
@@ -159,8 +157,8 @@ if burnin is False:
     hyper_parameters_ = tf.convert_to_tensor(initial_hyper_chain[0,:], dtype=tf.float32)
     hyper_current_state = [tf.convert_to_tensor(initial_hyper_chain[0:n_hyper_walkers,...], dtype=tf.float32), tf.convert_to_tensor(initial_hyper_chain[n_hyper_walkers:2*n_hyper_walkers,...], dtype=tf.float32)]
 else:
-    #hyper_parameters_ = tf.concat([tf.ones(9, dtype=tf.float32), tf.math.log(model_error + zp_error)], axis=-1)
-    hyper_parameters_ = tf.convert_to_tensor(np.array([ 0.98359346, 1.0160451, 0.9716604, 1.0174508, 1.0464727, 0.96167755, 0.9633688 ,  1.0043944 ,  1.0555319 , -2.698502  ,-3.623595  , -3.618765  , -3.7967343 , -3.889239  , -4.1963024 , -3.606665  , -3.7647383 , -3.570438  ]), dtype=tf.float32)
+    hyper_parameters_ = tf.concat([tf.ones(9, dtype=tf.float32), tf.math.log(model_error + zp_error)], axis=-1)
+    #hyper_parameters_ = tf.convert_to_tensor(np.array([ 0.98359346, 1.0160451, 0.9716604, 1.0174508, 1.0464727, 0.96167755, 0.9633688 ,  1.0043944 ,  1.0555319 , -2.698502  ,-3.623595  , -3.618765  , -3.7967343 , -3.889239  , -4.1963024 , -3.606665  , -3.7647383 , -3.570438  ]), dtype=tf.float32)
     hyper_current_state = [hyper_parameters_ + tf.random.normal([n_hyper_walkers, hyper_parameters_.shape[0]], 0, 1e-3), hyper_parameters_ + tf.random.normal([n_hyper_walkers, hyper_parameters_.shape[0]], 0, 1e-3)]
 
 # initialize n(z)
