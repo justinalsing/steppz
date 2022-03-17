@@ -13,7 +13,7 @@ from affine import *
 from ndes import *
 
 # thinning
-n_thin = 10
+n_thin = 30
 
 # number of bands
 n_bands = 9
