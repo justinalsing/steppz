@@ -26,6 +26,7 @@ zp_error = tf.constant([0.05, 0.01, 0.01, 0.01, 0.03, 0.03, 0.03, 0.03, 0.03], d
 
 # import data
 fluxes, flux_sigmas, zspec, zprior_sig, parameters = pickle.load(open('/cfs/home/alju5794/steppz/kids/mock_data/KV-like_mock-selected.pkl', 'rb'))
+zprior_zig[zprior_sig == 0.001] = 0.01
 
 # convert to tensors
 flux_variances = tf.constant(np.atleast_2d(flux_sigmas**2).astype(np.float32), dtype=tf.float32)
