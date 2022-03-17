@@ -10,8 +10,8 @@ from likelihoods import *
 # import training data
 
 # import the mags and thetas
-training_theta = np.concatenate([np.load('/cfs/home/alju5794/steppz/sps_models/model_B/training_data_prior/parameters/parameters{}.npy'.format(i)) for i in range(32)], axis=0)
-training_mags = np.concatenate([np.load('/cfs/home/alju5794/steppz/sps_models/model_B/training_data_prior/photometry/KV_photometry{}.npy'.format(i)).astype(np.float32) for i in range(32)], axis=0)
+training_theta = np.concatenate([np.load('/cfs/home/alju5794/steppz/sps_models/model_B/training_data_prior_GAMA/parameters/parameters{}.npy'.format(i)) for i in range(32)], axis=0)
+training_mags = np.concatenate([np.load('/cfs/home/alju5794/steppz/sps_models/model_B/training_data_prior_GAMA/photometry/KV_photometry{}.npy'.format(i)).astype(np.float32) for i in range(32)], axis=0)
 
 # transform to normalization parameter
 training_theta[:,0] = -2.5*training_theta[:,0] + distance_modulus(training_theta[:,-1].astype(np.float32))
@@ -28,7 +28,7 @@ model_error = tf.constant([0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03]
 zp_error = tf.constant([0.05, 0.01, 0.01, 0.01, 0.03, 0.03, 0.03, 0.03, 0.03], dtype=tf.float32)
 
 # import data
-fluxes, flux_sigmas, zspec, specsource, zb, zprior_sig = pickle.load(open('/cfs/home/alju5794/steppz/kids/data/KV1000_cut_all.pkl', 'rb'))
+fluxes, flux_sigmas, zspec, specsource, zb, zprior_sig = pickle.load(open('/cfs/home/alju5794/steppz/kids/data/KV1000_GAMA_cut_all.pkl', 'rb'))
 
 # training data cuts
 fmin = fluxes.min(axis=0)
@@ -81,8 +81,8 @@ for i in range(fluxes.shape[0]):
     estimator_theta[i,-1] = max(zspec[i], 3e-5)
     estimator_phi[i,-1] = z_bijector.inverse(estimator_theta[i,-1]).numpy()
 
-np.save('/cfs/home/alju5794/steppz/kids/initializations/B_phi0.npy', estimator_phi)
-np.save('/cfs/home/alju5794/steppz/kids/initializations/B_theta0.npy', estimator_theta)
+np.save('/cfs/home/alju5794/steppz/kids/initializations/B_phi0_GAMA.npy', estimator_phi)
+np.save('/cfs/home/alju5794/steppz/kids/initializations/B_theta0_GAMA.npy', estimator_theta)
 
 n_walkers = 1000
 walkers = np.zeros((n_walkers, estimator_phi.shape[0], estimator_phi.shape[1]))
@@ -90,7 +90,7 @@ for i in range(estimator_phi.shape[0]):
 
 	# phi walkers
     walkers[:,i,:] = estimator_phi[i,:] + np.random.normal(0, 0.05, size=(n_walkers, estimator_phi.shape[1]))
-    walkers[:,i,-1] = estimator_phi[i,-1] + np.random.normal(0, 1e-3, n_walkers)
+    walkers[:,i,-1] = estimator_phi[i,-1] + np.random.normal(0, 1e-2, n_walkers)
 
     # mass estimator
     log10M_0 = (estimator_theta[i,0] - distance_modulus(tf.math.maximum(1e-5, estimator_theta[i,-1])).numpy())/-2.5
@@ -104,4 +104,4 @@ for i in range(estimator_phi.shape[0]):
     # put into walkers
     walkers[:,i,0] = N
     
-np.save('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy', walkers)
+np.save('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi_GAMA.npy', walkers)
