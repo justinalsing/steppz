@@ -15,7 +15,7 @@ training_theta = np.concatenate([np.load('/cfs/home/alju5794/steppz/sps_models/m
 training_mags = np.concatenate([np.load('/cfs/home/alju5794/steppz/sps_models/model_B/training_data_prior_GAMA/photometry/KV_photometry{}.npy'.format(i)).astype(np.float32) for i in range(32)], axis=0)
 
 # transform to normalization parameter
-training_theta[:,0] = -2.5*training_theta[:,0] + distance_modulus(training_theta[:,-1].astype(np.float32))
+#training_theta[:,0] = -2.5*training_theta[:,0] + distance_modulus(training_theta[:,-1].astype(np.float32))
 
 # convert absolute mags to apparent and then flux
 training_mags = training_mags + np.expand_dims(training_theta[:,0], -1)
