@@ -83,7 +83,7 @@ def log_latentparameter_conditional(latentparameters, hyperparameters, fluxes, f
     predicted_flux_variances = tf.add(flux_variances, tf.square(tf.multiply(additive_fractional_errors, predicted_fluxes)))
 
     # log likelihood
-    log_likelihood_ = log_likelihood_normal(fluxes, flux_variances, predicted_fluxes, predicted_flux_variances)
+    log_likelihood_ = log_likelihood_normal(fluxes, predicted_fluxes, predicted_flux_variances)
     
     # log-prior
     log_prior_ = sps_prior.log_prob(latentparameters)
@@ -124,7 +124,7 @@ def log_hyperparameter_conditional(hyperparameters, model_fluxes, fluxes, flux_v
     predicted_flux_variances = tf.add(flux_variances, tf.square(tf.multiply(additive_fractional_errors, predicted_fluxes)))
 
     # log likelihoods
-    log_likelihood_ = log_likelihood_normal(fluxes, flux_variances, predicted_fluxes, predicted_flux_variances)
+    log_likelihood_ = log_likelihood_normal(fluxes, predicted_fluxes, predicted_flux_variances)
 
     # ignore any nans
     log_likelihood_ = tf.where(tf.math.is_nan(log_likelihood_), 0., log_likelihood_)
