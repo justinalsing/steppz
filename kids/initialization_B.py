@@ -31,11 +31,11 @@ zp_error = tf.constant([0.05, 0.01, 0.01, 0.01, 0.03, 0.03, 0.03, 0.03, 0.03], d
 fluxes, flux_sigmas, zspec, specsource, zb, zprior_sig = pickle.load(open('/cfs/home/alju5794/steppz/kids/data/KV1000_GAMA_cut_all.pkl', 'rb'))
 
 # training data cuts
-fmin = fluxes.min(axis=0)
-fmax = fluxes.max(axis=0)
-cut = (training_flux < fmin).all(axis=1) + (training_flux > fmax).all(axis=1)
-training_flux = training_flux[~cut,:]
-training_theta = training_theta[~cut,:]
+#fmin = fluxes.min(axis=0)
+#fmax = fluxes.max(axis=0)
+#cut = (training_flux < fmin).all(axis=1) + (training_flux > fmax).all(axis=1)
+#training_flux = training_flux[~cut,:]
+#training_theta = training_theta[~cut,:]
 
 # prior
 log10sSFR_emulator = RegressionNetwork(restore=True, restore_filename='/cfs/home/alju5794/steppz/sps_models/model_B/DPL_log10sSFR_emulator.pkl')
@@ -72,7 +72,7 @@ for i in range(fluxes.shape[0]):
     
     fluxes_ = tf.expand_dims(fluxes[i,:], 0)
     predicted_flux_variances_ = flux_sigmas[i,:]**2 + extra_flux_variance_
-    logl = log_likelihood_studentst2(fluxes_, flux_sigmas[i,:]**2, predicted_fluxes_, predicted_flux_variances_)
+    logl = log_likelihood_studentst2(fluxes_, predicted_fluxes_, predicted_flux_variances_)
     argmax = tf.math.argmax(logl, axis=0)
     estimator_phi[i,:] = training_phi[argmax,:]
     estimator_theta[i,:] = training_theta[argmax,:]
