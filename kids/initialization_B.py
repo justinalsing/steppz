@@ -53,7 +53,7 @@ prior = ModelABBaselinePrior(baselineSFRprior=baseline_SFR_prior_log_prob,
 training_phi = prior.bijector.inverse(training_theta).numpy()
 
 # cut out nans
-cut = np.isnan(training_phi).any(axis=1) + np.isinf(training_phi).any(axis=1) + np.isinf(prior.log_prob(training_phi).numpy()) + np.isnan(prior.log_prob(training_phi).numpy())
+cut = np.isnan(training_phi).any(axis=1) + np.isinf(training_phi).any(axis=1)# + np.isinf(prior.log_prob(training_phi).numpy()) + np.isnan(prior.log_prob(training_phi).numpy())
 training_flux = training_flux[~cut,:]
 training_theta = training_theta[~cut,:]
 training_phi = training_phi[~cut,:]
