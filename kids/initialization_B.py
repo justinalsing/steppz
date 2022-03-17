@@ -6,6 +6,7 @@ sys.path.append('/cfs/home/alju5794/steppz/code')
 from utils import *
 from priors import *
 from likelihoods import *
+from ndes import *
 
 # import training data
 
