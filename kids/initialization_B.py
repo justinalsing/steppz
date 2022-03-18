@@ -11,14 +11,14 @@ from ndes import *
 # import training data
 
 # import the mags and thetas
-training_theta = np.concatenate([np.load('/cfs/home/alju5794/steppz/sps_models/model_B/training_data_prior_GAMA/parameters/parameters{}.npy'.format(i)) for i in range(32)], axis=0)
-training_mags = np.concatenate([np.load('/cfs/home/alju5794/steppz/sps_models/model_B/training_data_prior_GAMA/photometry/KV_photometry{}.npy'.format(i)).astype(np.float32) for i in range(32)], axis=0)
+training_theta = np.concatenate([np.load('/cfs/home/alju5794/steppz/sps_models/model_B/training_data_prior_GAMA/parameters/parameters{}.npy'.format(i)) for i in range(10)], axis=0)
+training_mags = np.concatenate([np.load('/cfs/home/alju5794/steppz/sps_models/model_B/training_data_prior_GAMA/photometry/KV_photometry{}.npy'.format(i)).astype(np.float32) for i in range(10)], axis=0)
 
 # transform to normalization parameter
 #training_theta[:,0] = -2.5*training_theta[:,0] + distance_modulus(training_theta[:,-1].astype(np.float32))
 
 # convert absolute mags to apparent and then flux
-training_mags = training_mags + np.expand_dims(training_theta[:,0], -1)
+#training_mags = training_mags + np.expand_dims(training_theta[:,0], -1)
 training_flux = 10**(-0.4*training_mags + 9.)
 training_flux = training_flux.astype(np.float32)
 
@@ -47,7 +47,6 @@ prior = ModelABBaselinePrior(baselineSFRprior=baseline_SFR_prior_log_prob,
                              log10sSFRuniformlimits=tfd.Uniform(low=-14, high=-7.5),
                              redshift_prior=redshift_volume_prior,
                              FMRprior='curti')
-
 
 # biject the parameters
 training_phi = prior.bijector.inverse(training_theta).numpy()
