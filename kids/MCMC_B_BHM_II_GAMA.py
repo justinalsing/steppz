@@ -58,7 +58,7 @@ sps_prior = ModelABBaselinePrior(baselineSFRprior=baseline_SFR_prior_log_prob,
 n_sps_parameters = sps_prior.n_sps_parameters
 
 # N prior normalization emulator
-log_N_prior_normalization_emulator = RegressionNetwork(restore=True, restore_filename='/cfs/home/alju5794/steppz/kids/log_N_prior_normalization_emulator.pkl')
+#log_N_prior_normalization_emulator = RegressionNetwork(restore=True, restore_filename='/cfs/home/alju5794/steppz/kids/log_N_prior_normalization_emulator.pkl')
 
 # bijector from constrained parameter (physical) to unconstrained space for sampling. Note: no bijector for the normalization parameter N
 # forward pass takes you from unconstrained space to physical parameter space
@@ -70,10 +70,12 @@ transforms[1] = tfb.Invert(tfb.Square()) # dust2 -> sqrt(dust2)
 transform = tfb.Blockwise(transforms)
 
 # hyperparameter prior
-hyper_parameter_prior = tfd.Uniform(low=[12.5, 0.05], high=[14.5, 0.5])
+#hyper_parameter_prior = tfd.Uniform(low=[12.5, 0.05], high=[14.5, 0.5])
 
 # nuisance parameter prior
 #nuisance_parameter_prior = 
+
+hyper_parameters_ = None
 
 # input shape of latent parameters should be (n_walkers, n_galaxies, n_sps_parameters), output shape should be (n_walkers, n_galaxies)
 @tf.function
@@ -103,7 +105,7 @@ def log_latentparameter_conditional(latentparameters, hyperparameters, nuisancep
     log_prior_ = sps_prior.log_prob(latentparameters)
 
     # extra prior on N due to selection
-    log_prior_ = log_prior_ - tf.math.log(1. + tf.exp((N - hyperparameters[0])/hyperparameters[1])) - tf.squeeze(log_N_prior_normalization_emulator(tf.expand_dims(hyperparameters, 0)), -1)
+    log_prior_ = log_prior_# - tf.math.log(1. + tf.exp((N - hyperparameters[0])/hyperparameters[1])) - tf.squeeze(log_N_prior_normalization_emulator(tf.expand_dims(hyperparameters, 0)), -1)
 
     # extra redshift prior from speczs
     log_specz_prior_ = -tf.multiply(0.5, tf.square(tf.divide(tf.subtract(z, zspec), zprior_sig)))
@@ -111,17 +113,17 @@ def log_latentparameter_conditional(latentparameters, hyperparameters, nuisancep
     return log_likelihood_ + log_prior_ + log_specz_prior_
 
 # input shape of hyperparameters should be (n_walkers, n_hyperparameters), output shape should be (n_walkers)
-@tf.function
-def log_hyperparameter_conditional(hyperparameters, N, z):
+#@tf.function
+#def log_hyperparameter_conditional(hyperparameters, N, z):
     
     # split the hyper parameters
-    N0, sigmaN = tf.split(hyperparameters, (1, 1), axis=-1)
-    log10M = (N - distance_modulus(z)) / (-2.5)
+#    N0, sigmaN = tf.split(hyperparameters, (1, 1), axis=-1)
+#    log10M = (N - distance_modulus(z)) / (-2.5)
 
     # prior terms
-    log_prior_ = tf.reduce_sum(mass_function_log_prob(log10M, z) - tf.math.log(1. + tf.exp((N - N0)/sigmaN)), -1) - z.shape[0] * log_N_prior_normalization_emulator(hyperparameters)
+#    log_prior_ = tf.reduce_sum(mass_function_log_prob(log10M, z) - tf.math.log(1. + tf.exp((N - N0)/sigmaN)), -1) - z.shape[0] * log_N_prior_normalization_emulator(hyperparameters)
     
-    return tf.reduce_sum(log_prior_, -1) + tf.reduce_sum(hyper_parameter_prior.log_prob(hyperparameters), axis=-1)
+#    return tf.reduce_sum(log_prior_, -1) + tf.reduce_sum(hyper_parameter_prior.log_prob(hyperparameters), axis=-1)
 
 @tf.function
 def log_nuisance_parameter_conditional(nuisanceparameters, model_fluxes, fluxes, flux_variances):
@@ -161,13 +163,13 @@ else:
     latent_current_state = [tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi_GAMA.npy')[0:n_latent_walkers,:,:].astype(np.float32), dtype=tf.float32), tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[n_latent_walkers:2*n_latent_walkers,:,:].astype(np.float32), dtype=tf.float32)]
 
 # initialize hyper-parameters
-if burnin is False:
-    initial_hyper_chain = np.load('/cfs/home/alju5794/steppz/kids/initializations/hyper0.npy').astype(np.float32)
-    hyper_parameters_ = tf.convert_to_tensor(initial_hyper_chain[0,:], dtype=tf.float32)
-    hyper_current_state = [tf.convert_to_tensor(initial_hyper_chain[0:n_hyper_walkers,...], dtype=tf.float32), tf.convert_to_tensor(initial_hyper_chain[n_hyper_walkers:2*n_hyper_walkers,...], dtype=tf.float32)]
-else:
-    hyper_parameters_ = tf.convert_to_tensor(np.array([13.5, 0.2]).astype(np.float32), dtype=tf.float32)
-    hyper_current_state = [hyper_parameters_ + tf.random.normal([n_hyper_walkers, hyper_parameters_.shape[0]], 0, [1e-1, 1e-2]), hyper_parameters_ + tf.random.normal([n_hyper_walkers, hyper_parameters_.shape[0]], 0, [1e-1, 1e-2])]
+#if burnin is False:
+#    initial_hyper_chain = np.load('/cfs/home/alju5794/steppz/kids/initializations/hyper0.npy').astype(np.float32)
+#    hyper_parameters_ = tf.convert_to_tensor(initial_hyper_chain[0,:], dtype=tf.float32)
+#    hyper_current_state = [tf.convert_to_tensor(initial_hyper_chain[0:n_hyper_walkers,...], dtype=tf.float32), tf.convert_to_tensor(initial_hyper_chain[n_hyper_walkers:2*n_hyper_walkers,...], dtype=tf.float32)]
+#else:
+#    hyper_parameters_ = tf.convert_to_tensor(np.array([13.5, 0.2]).astype(np.float32), dtype=tf.float32)
+#    hyper_current_state = [hyper_parameters_ + tf.random.normal([n_hyper_walkers, hyper_parameters_.shape[0]], 0, [1e-1, 1e-2]), hyper_parameters_ + tf.random.normal([n_hyper_walkers, hyper_parameters_.shape[0]], 0, [1e-1, 1e-2])]
 
 # initialize nuisance parameters
 nuisance_parameters_ = tf.convert_to_tensor(np.concatenate([np.ones([n_bands]), np.log(model_error + zp_error)]), dtype=tf.float32)
@@ -213,15 +215,15 @@ if burnin is True:
     nuisance_parameters_ = nuisance_current_state[np.random.randint(0, 2)][np.random.randint(0, n_nuisance_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
 
     # hyper-parameter sampling
-    hyper_samples_ = affine_sample(log_hyperparameter_conditional, n_hyper_burnin_steps, hyper_current_state, args=[N, z])
-    hyper_current_state = tf.split(hyper_samples_[-1,...], (n_hyper_walkers, n_hyper_walkers), axis=0) # set current walkers state
-    hyper_parameters_ = hyper_current_state[np.random.randint(0, 2)][np.random.randint(0, n_hyper_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
+#    hyper_samples_ = affine_sample(log_hyperparameter_conditional, n_hyper_burnin_steps, hyper_current_state, args=[N, z])
+#    hyper_current_state = tf.split(hyper_samples_[-1,...], (n_hyper_walkers, n_hyper_walkers), axis=0) # set current walkers state
+#    hyper_parameters_ = hyper_current_state[np.random.randint(0, 2)][np.random.randint(0, n_hyper_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
 
     # save the chain
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA_with_selection/latent{}.npy'.format(0), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),...] )
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA_with_selection/z{}.npy'.format(0), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),:,-1] )
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA_with_selection/hyper{}.npy'.format(0), hyper_samples_[-1,...].numpy().astype(np.float32))
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA_with_selection/nuisance{}.npy'.format(0), nuisance_samples_[-1,...].numpy().astype(np.float32))
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA/latent{}.npy'.format(0), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),...] )
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA/z{}.npy'.format(0), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),:,-1] )
+#    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA/hyper{}.npy'.format(0), hyper_samples_[-1,...].numpy().astype(np.float32))
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA/nuisance{}.npy'.format(0), nuisance_samples_[-1,...].numpy().astype(np.float32))
 
     # burn in with zs free...
 
@@ -245,15 +247,15 @@ if burnin is True:
     nuisance_parameters_ = nuisance_current_state[np.random.randint(0, 2)][np.random.randint(0, n_nuisance_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
 
     # hyper-parameter sampling
-    hyper_samples_ = affine_sample(log_hyperparameter_conditional, n_hyper_burnin_steps, hyper_current_state, args=[N, z])
-    hyper_current_state = tf.split(hyper_samples_[-1,...], (n_hyper_walkers, n_hyper_walkers), axis=0) # set current walkers state
-    hyper_parameters_ = hyper_current_state[np.random.randint(0, 2)][np.random.randint(0, n_hyper_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
+  #  hyper_samples_ = affine_sample(log_hyperparameter_conditional, n_hyper_burnin_steps, hyper_current_state, args=[N, z])
+  #  hyper_current_state = tf.split(hyper_samples_[-1,...], (n_hyper_walkers, n_hyper_walkers), axis=0) # set current walkers state
+  #  hyper_parameters_ = hyper_current_state[np.random.randint(0, 2)][np.random.randint(0, n_hyper_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
 
     # save the chain
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA_with_selection/latent{}.npy'.format(1), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),...] )
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA_with_selection/z{}.npy'.format(1), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),:,-1] )
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA_with_selection/hyper{}.npy'.format(1), hyper_samples_[-1,...].numpy().astype(np.float32))
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA_with_selection/nuisance{}.npy'.format(1), nuisance_samples_[-1,...].numpy().astype(np.float32))
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA/latent{}.npy'.format(1), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),...] )
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA/z{}.npy'.format(1), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),:,-1] )
+  #  np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA/hyper{}.npy'.format(1), hyper_samples_[-1,...].numpy().astype(np.float32))
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA/nuisance{}.npy'.format(1), nuisance_samples_[-1,...].numpy().astype(np.float32))
 
 # main chain...
 
@@ -280,12 +282,12 @@ for step in range(n_steps):
     nuisance_parameters_ = nuisance_current_state[np.random.randint(0, 2)][np.random.randint(0, n_nuisance_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
 
     # hyper-parameter sampling
-    hyper_samples_ = affine_sample(log_hyperparameter_conditional, n_hyper_sub_steps, hyper_current_state, args=[N, z])
-    hyper_current_state = tf.split(hyper_samples_[-1,...], (n_hyper_walkers, n_hyper_walkers), axis=0) # set current walkers state
-    hyper_parameters_ = hyper_current_state[np.random.randint(0, 2)][np.random.randint(0, n_hyper_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
+ #   hyper_samples_ = affine_sample(log_hyperparameter_conditional, n_hyper_sub_steps, hyper_current_state, args=[N, z])
+ #   hyper_current_state = tf.split(hyper_samples_[-1,...], (n_hyper_walkers, n_hyper_walkers), axis=0) # set current walkers state
+ #   hyper_parameters_ = hyper_current_state[np.random.randint(0, 2)][np.random.randint(0, n_hyper_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
 
     # save the chain
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA_with_selection/latent{}.npy'.format(step+2), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),...] )
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA_with_selection/z{}.npy'.format(step+2), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),:,-1] )
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA_with_selection/hyper{}.npy'.format(step+2), hyper_samples_[-1,...].numpy().astype(np.float32))
-    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA_with_selection/nuisance{}.npy'.format(step+2), nuisance_samples_[-1,...].numpy().astype(np.float32))
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA/latent{}.npy'.format(step+2), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),...] )
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA/z{}.npy'.format(step+2), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),:,-1] )
+ #   np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA/hyper{}.npy'.format(step+2), hyper_samples_[-1,...].numpy().astype(np.float32))
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_II_GAMA/nuisance{}.npy'.format(step+2), nuisance_samples_[-1,...].numpy().astype(np.float32))
