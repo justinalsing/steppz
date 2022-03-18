@@ -29,6 +29,7 @@ zp_error = tf.constant([0.05, 0.01, 0.01, 0.01, 0.03, 0.03, 0.03, 0.03, 0.03], d
 
 # import data
 fluxes, flux_sigmas, zspec, specsource, zb, zprior_sig = pickle.load(open('/cfs/home/alju5794/steppz/kids/data/KV1000_GAMA_cut_all.pkl', 'rb'))
+zprior_sig[zprior_sig < 1.] = 0.01
 
 # convert to tensors
 flux_variances = tf.constant(np.atleast_2d(flux_sigmas**2).astype(np.float32), dtype=tf.float32)
@@ -36,7 +37,6 @@ fluxes = tf.constant(np.atleast_2d(fluxes).astype(np.float32), dtype=tf.float32)
 zspec = tf.constant(zspec.astype(np.float32), dtype=tf.float32)
 zprior_sig = tf.constant(zprior_sig.astype(np.float32), dtype=tf.float32)
 zprior_sig_fixed = tf.ones(zprior_sig.shape, dtype=tf.float32)*0.01
-zprior_sig[zprior_sig < 1.] = 0.01
 
 # emulator models
 n_layers = 4
@@ -124,7 +124,7 @@ def log_hyperparameter_conditional(hyperparameters, N, z):
     return tf.reduce_sum(log_prior_, -1) + tf.reduce_sum(hyper_parameter_prior.log_prob(hyperparameters), axis=-1)
 
 @tf.function
-def log_nuisance_parameter_conditional(nuisanceparameters, model_fluxes, fluxes, flux_variances):
+def log_nuisanceparameter_conditional(nuisanceparameters, model_fluxes, fluxes, flux_variances):
 
     # split the hyper parameters
     zero_points, additive_log_fractional_errors = tf.split(nuisanceparameters, (n_bands, n_bands), axis=-1)

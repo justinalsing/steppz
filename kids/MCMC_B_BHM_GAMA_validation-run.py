@@ -100,7 +100,7 @@ def log_latentparameter_conditional(latentparameters, hyperparameters, nuisancep
     log_prior_ = sps_prior.log_prob(latentparameters)
 
     # extra prior on N due to selection
-    log_prior_ = log_prior_ - tf.math.log(1. + tf.exp((N - hyperparameters[0])/hyperparameters[1])) - tf.squeeze(log_N_prior_normalization_emulator(tf.expand_dims(hyperparameters, 0)), -1)
+    log_prior_ = log_prior_ #- tf.math.log(1. + tf.exp((N - hyperparameters[0])/hyperparameters[1])) - tf.squeeze(log_N_prior_normalization_emulator(tf.expand_dims(hyperparameters, 0)), -1)
 
     # extra redshift prior from speczs
     log_specz_prior_ = -tf.multiply(0.5, tf.square(tf.divide(tf.subtract(z, zspec), zprior_sig)))
@@ -121,7 +121,7 @@ def log_latentparameter_conditional(latentparameters, hyperparameters, nuisancep
 #    return tf.reduce_sum(log_prior_, -1) + tf.reduce_sum(hyper_parameter_prior.log_prob(hyperparameters), axis=-1)
 
 @tf.function
-def log_nuisance_parameter_conditional(nuisanceparameters, model_fluxes, fluxes, flux_variances):
+def log_nuisanceparameter_conditional(nuisanceparameters, model_fluxes, fluxes, flux_variances):
 
     # split the hyper parameters
     zero_points, additive_log_fractional_errors = tf.split(nuisanceparameters, (n_bands, n_bands), axis=-1)

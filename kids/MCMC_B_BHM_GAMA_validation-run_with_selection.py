@@ -119,7 +119,7 @@ def log_hyperparameter_conditional(hyperparameters, N, z):
     return tf.reduce_sum(log_prior_, -1) + tf.reduce_sum(hyper_parameter_prior.log_prob(hyperparameters), axis=-1)
 
 @tf.function
-def log_nuisance_parameter_conditional(nuisanceparameters, model_fluxes, fluxes, flux_variances):
+def log_nuisanceparameter_conditional(nuisanceparameters, model_fluxes, fluxes, flux_variances):
 
     # split the hyper parameters
     zero_points, additive_log_fractional_errors = tf.split(nuisanceparameters, (n_bands, n_bands), axis=-1)
