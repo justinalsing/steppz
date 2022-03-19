@@ -12,6 +12,9 @@ from likelihoods import *
 from affine import *
 from ndes import *
 
+# burnin
+burnin = False
+
 # thinning
 n_thin = 30
 
@@ -63,9 +66,6 @@ bijector = sps_prior.bijector
 transforms = [tfb.Identity() for _ in range(n_sps_parameters-1)]
 transforms[1] = tfb.Invert(tfb.Square()) # dust2 -> sqrt(dust2)
 transform = tfb.Blockwise(transforms)
-
-# hyperparameter prior
-#hyper_parameter_prior = tfd.Uniform(low=[12.5, 0.05], high=[14.5, 0.5])
 
 # nuisance parameter prior
 #nuisance_parameter_prior = 
@@ -152,16 +152,19 @@ n_hyper_walkers = 400
 n_nuisance_walkers = 400
 
 # initialize latent
-#latent_current_state = [tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[0:n_latent_walkers,:,:].astype(np.float32), dtype=tf.float32), tf.convert_to_tensor(np.load('/cfs/home/alju5794/steppz/kids/initializations/B_walkers_phi.npy')[n_latent_walkers:2*n_latent_walkers,:,:].astype(np.float32), dtype=tf.float32)]
-latent_current_state = [tf.convert_to_tensor(tf.expand_dims(sps_prior.bijector.inverse(parameters.astype(np.float32)), 0).numpy() + tf.random.normal([n_latent_walkers, parameters.shape[0], parameters.shape[1]], 0, 1e-1).numpy(), dtype=tf.float32), tf.convert_to_tensor(tf.expand_dims(sps_prior.bijector.inverse(parameters.astype(np.float32)), 0).numpy() + tf.random.normal([n_latent_walkers, parameters.shape[0], parameters.shape[1]], 0, 1e-1).numpy(), dtype=tf.float32)]
+if burnin is True:
+    latent_current_state = [tf.convert_to_tensor(tf.expand_dims(sps_prior.bijector.inverse(parameters.astype(np.float32)), 0).numpy() + tf.random.normal([n_latent_walkers, parameters.shape[0], parameters.shape[1]], 0, 1e-1).numpy(), dtype=tf.float32), tf.convert_to_tensor(tf.expand_dims(sps_prior.bijector.inverse(parameters.astype(np.float32)), 0).numpy() + tf.random.normal([n_latent_walkers, parameters.shape[0], parameters.shape[1]], 0, 1e-1).numpy(), dtype=tf.float32)]
+    
+    nuisance_parameters_ = tf.convert_to_tensor(np.concatenate([np.ones(n_bands), np.log(model_error + zp_error)]), dtype=tf.float32)
+    nuisance_current_state = [nuisance_parameters_ + tf.random.normal([n_nuisance_walkers, nuisance_parameters_.shape[0]], 0, 1e-3), nuisance_parameters_ + tf.random.normal([n_nuisance_walkers, nuisance_parameters_.shape[0]], 0, 1e-3)]
 
-# initialize nuisance-parameters
-nuisance_parameters_ = tf.convert_to_tensor(np.concatenate([np.ones(n_bands), np.log(model_error + zp_error)]), dtype=tf.float32)
-nuisance_current_state = [nuisance_parameters_ + tf.random.normal([n_nuisance_walkers, nuisance_parameters_.shape[0]], 0, 1e-3), nuisance_parameters_ + tf.random.normal([n_nuisance_walkers, nuisance_parameters_.shape[0]], 0, 1e-3)]
+else:
+    initial_latent_chain = np.load('/cfs/home/alju5794/steppz/kids/chains/B_BHM_GAMA_validation-run/latent0.npy').astype(np.float32)
+    latent_current_state = [sps_prior.bijector.inverse(initial_latent_chain[0:n_latent_walkers,...]), sps_prior.bijector.inverse(initial_latent_chain[n_latent_walkers:2*n_latent_walkers,...])] 
 
-# initialize hyper parameters
-#hyper_parameters_ = tf.convert_to_tensor(np.array([13.5, 0.2]).astype(np.float32), dtype=tf.float32)
-#hyper_current_state = [hyper_parameters_ + tf.random.normal([n_hyper_walkers, hyper_parameters_.shape[0]], 0, [1e-1, 1e-2]), hyper_parameters_ + tf.random.normal([n_hyper_walkers, hyper_parameters_.shape[0]], 0, [1e-1, 1e-2])]
+    initial_nuisance_chain = np.load('/cfs/home/alju5794/steppz/kids/chains/B_BHM_GAMA_validation-run/nuisance0.npy').astype(np.float32)
+    nuisance_current_state = [tf.convert_to_tensor(initial_nuisance_chain[0:n_nuisance_walkers,...], dtype=tf.float32), tf.convert_to_tensor(initial_nuisance_chain[n_nuisance_walkers:2*n_nuisance_walkers,...], dtype=tf.float32)] 
+    nuisance_parameters_ = nuisance_current_state[np.random.randint(0, 2)][np.random.randint(0, n_nuisance_walkers),...]
 
 # set up batching of latent parameters
 n_latent = fluxes.shape[0] # number of galaxies
@@ -170,52 +173,15 @@ n_latent_batches = n_latent // latent_batch_size + int( (n_latent % latent_batch
 batch_indices = [np.arange(latent_batch_size*i, min(latent_batch_size*(i+1), n_latent)) for i in range(n_latent_batches)]
 
 # how many MCMC steps?
-n_steps = 600
+n_steps = 1000
 n_latent_sub_steps = 10
-n_hyper_sub_steps = 10
-n_nuisance_sub_steps = 10
-n_nz_sub_steps = 10
+n_nuisance_sub_steps = 50
 n_latent_burnin_steps = 500
 n_hyper_burnin_steps = 500
 n_nuisance_burnin_steps = 500
 
-# burn in with zs fixed...
-
-# burn in latent parameters, conditioned on hyper-parameters (do it in batches and concatenate them together)
-latent_samples_ = tf.concat([affine_sample_batch_state(log_latentparameter_conditional, 
-                                                 n_latent_burnin_steps, 
-                                                 [tf.gather(latent_current_state[0], batch_indices[_], axis=1), tf.gather(latent_current_state[1], batch_indices[_], axis=1)], 
-                                                 args=[hyper_parameters_, nuisance_parameters_, tf.gather(fluxes, batch_indices[_], axis=0), tf.gather(flux_variances, batch_indices[_], axis=0), tf.gather(zspec, batch_indices[_], axis=0), tf.gather(zprior_sig, batch_indices[_], axis=0)], tensor=True) for _ in range(n_latent_batches)], axis=1)
-latent_current_state = tf.split(latent_samples_, (n_latent_walkers, n_latent_walkers), axis=0) # set current walkers state
-latent_parameters_ = latent_current_state[np.random.randint(0, 2)][np.random.randint(0, n_latent_walkers),...] # latent-parameters to condition on for next Gibbs step (chosen randomly from walkers)
-
-# compute model fluxes for latent parameters that we'll now condition on (which remain fixed during the hyper-parameter sampling step)
-theta = sps_prior.bijector(latent_parameters_)
-N = theta[...,0] # extract normalization parameter N = -2.5log10M + dm(z)
-z = theta[...,-1] # redshifts
-model_fluxes = tf.concat([emulator.fluxes(transform(tf.gather(theta[...,1:], batch_indices[_], axis=0)), tf.gather(N, batch_indices[_], axis=0)) for _ in range(n_latent_batches)], axis=0)        
-
-# sample nuisance-parameters, conditioned on latent parameters
-nuisance_samples_ = affine_sample(log_nuisanceparameter_conditional, n_nuisance_burnin_steps, nuisance_current_state, args=[model_fluxes, fluxes, flux_variances])
-nuisance_current_state = tf.split(nuisance_samples_[-1,...], (n_nuisance_walkers, n_nuisance_walkers), axis=0) # set current walkers state
-nuisance_parameters_ = nuisance_current_state[np.random.randint(0, 2)][np.random.randint(0, n_nuisance_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
-
-# hyper-parameter sampling
-#hyper_samples_ = affine_sample(log_hyperparameter_conditional, n_hyper_burnin_steps, hyper_current_state, args=[N, z])
-#hyper_current_state = tf.split(hyper_samples_[-1,...], (n_hyper_walkers, n_hyper_walkers), axis=0) # set current walkers state
-#hyper_parameters_ = hyper_current_state[np.random.randint(0, 2)][np.random.randint(0, n_hyper_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
-
-# save the chain
-np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_GAMA_validation-run/latent{}.npy'.format(0), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),...] )
-np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_GAMA_validation-run/z{}.npy'.format(0), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),:,-1] )
-#np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_GAMA_validation-run/hyper{}.npy'.format(0), hyper_samples_[-1,...].numpy().astype(np.float32))
-np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_GAMA_validation-run/nuisance{}.npy'.format(0), nuisance_samples_[-1,...].numpy().astype(np.float32))
-
-# main chain...
-
-# loop over batches
-for step in range(n_steps):
-
+# burn in...
+if burnin is True:
     # burn in latent parameters, conditioned on hyper-parameters (do it in batches and concatenate them together)
     latent_samples_ = tf.concat([affine_sample_batch_state(log_latentparameter_conditional, 
                                                      n_latent_burnin_steps, 
@@ -232,6 +198,41 @@ for step in range(n_steps):
 
     # sample nuisance-parameters, conditioned on latent parameters
     nuisance_samples_ = affine_sample(log_nuisanceparameter_conditional, n_nuisance_burnin_steps, nuisance_current_state, args=[model_fluxes, fluxes, flux_variances])
+    nuisance_current_state = tf.split(nuisance_samples_[-1,...], (n_nuisance_walkers, n_nuisance_walkers), axis=0) # set current walkers state
+    nuisance_parameters_ = nuisance_current_state[np.random.randint(0, 2)][np.random.randint(0, n_nuisance_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
+
+    # hyper-parameter sampling
+    #hyper_samples_ = affine_sample(log_hyperparameter_conditional, n_hyper_burnin_steps, hyper_current_state, args=[N, z])
+    #hyper_current_state = tf.split(hyper_samples_[-1,...], (n_hyper_walkers, n_hyper_walkers), axis=0) # set current walkers state
+    #hyper_parameters_ = hyper_current_state[np.random.randint(0, 2)][np.random.randint(0, n_hyper_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
+
+    # save the chain
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_GAMA_validation-run/latent{}.npy'.format(0), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),...] )
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_GAMA_validation-run/z{}.npy'.format(0), sps_prior.bijector(latent_samples_).numpy().astype(np.float32)[np.random.randint(0, 2*n_latent_walkers, n_thin),:,-1] )
+    #np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_GAMA_validation-run/hyper{}.npy'.format(0), hyper_samples_[-1,...].numpy().astype(np.float32))
+    np.save('/cfs/home/alju5794/steppz/kids/chains/B_BHM_GAMA_validation-run/nuisance{}.npy'.format(0), nuisance_samples_[-1,...].numpy().astype(np.float32))
+
+# main chain...
+
+# loop over batches
+for step in range(n_steps):
+
+    # burn in latent parameters, conditioned on hyper-parameters (do it in batches and concatenate them together)
+    latent_samples_ = tf.concat([affine_sample_batch_state(log_latentparameter_conditional, 
+                                                     n_latent_sub_steps, 
+                                                     [tf.gather(latent_current_state[0], batch_indices[_], axis=1), tf.gather(latent_current_state[1], batch_indices[_], axis=1)], 
+                                                     args=[hyper_parameters_, nuisance_parameters_, tf.gather(fluxes, batch_indices[_], axis=0), tf.gather(flux_variances, batch_indices[_], axis=0), tf.gather(zspec, batch_indices[_], axis=0), tf.gather(zprior_sig, batch_indices[_], axis=0)], tensor=True) for _ in range(n_latent_batches)], axis=1)
+    latent_current_state = tf.split(latent_samples_, (n_latent_walkers, n_latent_walkers), axis=0) # set current walkers state
+    latent_parameters_ = latent_current_state[np.random.randint(0, 2)][np.random.randint(0, n_latent_walkers),...] # latent-parameters to condition on for next Gibbs step (chosen randomly from walkers)
+
+    # compute model fluxes for latent parameters that we'll now condition on (which remain fixed during the hyper-parameter sampling step)
+    theta = sps_prior.bijector(latent_parameters_)
+    N = theta[...,0] # extract normalization parameter N = -2.5log10M + dm(z)
+    z = theta[...,-1] # redshifts
+    model_fluxes = tf.concat([emulator.fluxes(transform(tf.gather(theta[...,1:], batch_indices[_], axis=0)), tf.gather(N, batch_indices[_], axis=0)) for _ in range(n_latent_batches)], axis=0)        
+
+    # sample nuisance-parameters, conditioned on latent parameters
+    nuisance_samples_ = affine_sample(log_nuisanceparameter_conditional, n_nuisance_sub_steps, nuisance_current_state, args=[model_fluxes, fluxes, flux_variances])
     nuisance_current_state = tf.split(nuisance_samples_[-1,...], (n_nuisance_walkers, n_nuisance_walkers), axis=0) # set current walkers state
     nuisance_parameters_ = nuisance_current_state[np.random.randint(0, 2)][np.random.randint(0, n_nuisance_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
 
