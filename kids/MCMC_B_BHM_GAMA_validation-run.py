@@ -13,7 +13,7 @@ from affine import *
 from ndes import *
 
 # burnin
-burnin = False
+burnin = True
 
 # thinning
 n_thin = 30

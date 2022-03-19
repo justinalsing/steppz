@@ -182,7 +182,7 @@ n_latent_batches = n_latent // latent_batch_size + int( (n_latent % latent_batch
 batch_indices = [np.arange(latent_batch_size*i, min(latent_batch_size*(i+1), n_latent)) for i in range(n_latent_batches)]
 
 # how many MCMC steps?
-n_steps = 600
+n_steps = 1000
 n_latent_sub_steps = 10
 n_hyper_sub_steps = 10
 n_nuisance_sub_steps = 10

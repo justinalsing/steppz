@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-#SBATCH -J B_GAMA
+#SBATCH -J BIIG
 #SBATCH -t 48:00:00
 #SBATCH -A cops
 #SBATCH -p ampere

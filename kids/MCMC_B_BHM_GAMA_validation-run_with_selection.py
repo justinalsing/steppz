@@ -13,7 +13,7 @@ from affine import *
 from ndes import *
 
 # burn in 
-burnin = False
+burnin = True
 
 # thinning
 n_thin = 30
@@ -110,16 +110,15 @@ def log_latentparameter_conditional(latentparameters, hyperparameters, nuisancep
 
 # input shape of hyperparameters should be (n_walkers, n_hyperparameters), output shape should be (n_walkers)
 @tf.function
-def log_hyperparameter_conditional(hyperparameters, N, z):
+def log_hyperparameter_conditional(hyperparameters, N):
     
     # split the hyper parameters
     N0, sigmaN = tf.split(hyperparameters, (1, 1), axis=-1)
-    log10M = (N - distance_modulus(z)) / (-2.5)
 
     # prior terms
-    log_prior_ = tf.reduce_sum(mass_function_log_prob(log10M, z) - tf.math.log(1. + tf.exp((N - N0)/sigmaN)), -1) - z.shape[0] * log_N_prior_normalization_emulator(hyperparameters)
+    log_prior_ = tf.reduce_sum(-tf.math.log(1. + tf.exp((N - N0)/sigmaN)), -1) - N.shape[0] * tf.squeeze(log_N_prior_normalization_emulator(hyperparameters), -1)
     
-    return tf.reduce_sum(log_prior_, -1) + tf.reduce_sum(hyper_parameter_prior.log_prob(hyperparameters), axis=-1)
+    return log_prior_ + tf.reduce_sum(hyper_parameter_prior.log_prob(hyperparameters), axis=-1)
 
 @tf.function
 def log_nuisanceparameter_conditional(nuisanceparameters, model_fluxes, fluxes, flux_variances):
@@ -187,11 +186,11 @@ batch_indices = [np.arange(latent_batch_size*i, min(latent_batch_size*(i+1), n_l
 # how many MCMC steps?
 n_steps = 1000
 n_latent_sub_steps = 10
-n_hyper_sub_steps = 50
-n_nuisance_sub_steps = 50
+n_hyper_sub_steps = 100
+n_nuisance_sub_steps = 100
 n_latent_burnin_steps = 500
-n_hyper_burnin_steps = 500
-n_nuisance_burnin_steps = 500
+n_hyper_burnin_steps = 1000
+n_nuisance_burnin_steps = 1000
 
 # burn in...
 
@@ -217,7 +216,7 @@ if burnin is True:
     nuisance_parameters_ = nuisance_current_state[np.random.randint(0, 2)][np.random.randint(0, n_nuisance_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
 
     # hyper-parameter sampling
-    hyper_samples_ = affine_sample(log_hyperparameter_conditional, n_hyper_burnin_steps, hyper_current_state, args=[N, z])
+    hyper_samples_ = affine_sample(log_hyperparameter_conditional, n_hyper_burnin_steps, hyper_current_state, args=[N])
     hyper_current_state = tf.split(hyper_samples_[-1,...], (n_hyper_walkers, n_hyper_walkers), axis=0) # set current walkers state
     hyper_parameters_ = hyper_current_state[np.random.randint(0, 2)][np.random.randint(0, n_hyper_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
 
@@ -252,7 +251,7 @@ for step in range(n_steps):
     nuisance_parameters_ = nuisance_current_state[np.random.randint(0, 2)][np.random.randint(0, n_nuisance_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
 
     # hyper-parameter sampling
-    hyper_samples_ = affine_sample(log_hyperparameter_conditional, n_hyper_sub_steps, hyper_current_state, args=[N, z])
+    hyper_samples_ = affine_sample(log_hyperparameter_conditional, n_hyper_sub_steps, hyper_current_state, args=[N])
     hyper_current_state = tf.split(hyper_samples_[-1,...], (n_hyper_walkers, n_hyper_walkers), axis=0) # set current walkers state
     hyper_parameters_ = hyper_current_state[np.random.randint(0, 2)][np.random.randint(0, n_hyper_walkers),...] # hyper-parameters to condition on for next Gibbs step (chosen randomly from walkers)
 
