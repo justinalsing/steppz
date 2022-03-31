@@ -15,8 +15,22 @@ anchor_points_logphi1_ = tf.constant(np.array([-2.44, -3.08, -4.14]).astype(np.f
 anchor_points_logphi2_ = tf.constant(np.array([-2.89, -3.29, -3.51]).astype(np.float32))
 anchor_points_M_star_ = tf.constant(np.array([10.79, 10.88, 10.84]).astype(np.float32))
 
+# Joel
 alpha1_ = tf.constant(-0.28)
 alpha2_ = tf.constant(-1.48)
+
+# GAMA
+#alpha1_ = tf.constant(-0.466)
+#alpha2_ = tf.constant(-1.53)
+
+# Joel's SMS prior parameters
+joel_SFS_parameters_ = tf.constant(np.array([-0.15040097,  0.9800668 , -0.50802046,  1.0515388 , -0.28611764,
+        0.02131329,  0.05053138,  1.0766244 , -0.02015052, -0.13125503,
+        0.7205097 , -0.18212801,  1.5429502 , -1.5872463 , -0.04843145,
+        0.65359867,  0.92735046, -0.17695354, 10.442122  ,  0.56389964,
+        0.7500511 ,  2.0604856 , 10.335057  , -0.3050156 ,  0.5491848 ,
+       10.611108  ,  0.08009169, -0.06575003,  0.3912887 ,  0.54855245,
+        0.44964817, 11.159543  ,  0.11614972, -1.5658572 ]).astype(np.float32))
 
 @tf.function
 def anchor_points_to_coefficients(anchor_points):
@@ -46,10 +60,9 @@ def mass_function_log_prob(log10M, z):
     phi1, phi2, Mstar = compute_phi12_mstar(z)
 
     # normalization: NOTE THIS NORMALIZES THE MASS FUNCTION OVER LOG10M [7, 13] UP TO Z = 2.5
-    log_normalization = tf.math.log(-0.00746909 * z**3 + 0.04891415 * z**2 - 0.13758815*z + 0.20274272)
+    #log_normalization = tf.math.log(-0.00746909 * z**3 + 0.04891415 * z**2 - 0.13758815*z + 0.20274272)
 
-    return tf.math.log(ln10_ * (phi1*10**((log10M - Mstar)*(alpha1_+1))*tf.exp(-10**(log10M - Mstar)) + phi2*10**((log10M - Mstar)*(alpha2_+1))*tf.exp(-10**(log10M - Mstar)) ) ) - log_normalization
-
+    return tf.math.log(ln10_ * (phi1*10**((log10M - Mstar)*(alpha1_+1))*tf.exp(-10**(log10M - Mstar)) + phi2*10**((log10M - Mstar)*(alpha2_+1))*tf.exp(-10**(log10M - Mstar)) ) ) #- log_normalization
 
 # Mass-metallicity relation Gallazzi+
 @tf.function
@@ -73,6 +86,38 @@ def log10sSFRpriorMizuki(log10sSFR, z):
     sigma_log10sSFR_Q = 0.36
     
     return tf.math.log(0.5 * tf.exp(-0.5 * (log10sSFR - mu_log10sSFR)**2 / sigma_log10sSFR**2 - 0.5 * tf.math.log(2*np.pi*sigma_log10sSFR**2)) + 0.5 * tf.exp(-0.5 * (log10sSFR - mu_log10sSFR_Q)**2 / sigma_log10sSFR_Q**2 - 0.5 * tf.math.log(2*np.pi*sigma_log10sSFR_Q**2)) + 1e-32)
+
+# Star forming main sequence SFR prior from Leja+2022
+@tf.function
+def log10SFRpriorJoel(log10SFR, log10M, z):
+
+    # extract trainable variables
+    a_, b_, C_, d_, e_, f_, g_, h_, i_, j_, log10Mt_sf_, log10Mt_q_, sigma_sf, sigma_q0, sigma_q1, sigma_qt, sigma_qs, skew_q = tf.split(joel_SFS_parameters_,(3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 1, 1))
+
+    Z = tf.stack([tf.ones(z.shape[0]), z, z**2], axis=-1)
+    
+    a = tf.tensordot(Z, a_, axes=1)
+    b = tf.tensordot(Z, b_, axes=1)
+    c = tf.tensordot(Z, C_, axes=1)
+    log10Mt_sf = tf.tensordot(Z, log10Mt_sf_, axes=1)
+    
+    d = tf.tensordot(Z, d_, axes=1)
+    e = tf.tensordot(Z, e_, axes=1)
+    f = tf.tensordot(Z, f_, axes=1)
+    log10Mt_q = tf.tensordot(Z, log10Mt_q_, axes=1)
+    
+    # GMM parameters
+    sigma_q = sigma_q0 + (sigma_q1 - sigma_q0) * tf.sigmoid((log10M - sigma_qt) / sigma_qs)
+    mu_sf = (a * tf.cast(log10M > log10Mt_sf, dtype=tf.float32) + b * tf.cast(log10M < log10Mt_sf, dtype=tf.float32) ) * (log10M - log10Mt_sf) + c
+    mu_q = (d * tf.cast(log10M > log10Mt_q, dtype=tf.float32) + e * tf.cast(log10M < log10Mt_q, dtype=tf.float32) ) * (log10M - log10Mt_q) + f - 1.
+    r_q = tf.sigmoid(j_) * tf.sigmoid((log10M - (g_ + h_*z)) / i_ )
+    
+    p_sf = tfd.Normal(loc=mu_sf, scale=sigma_sf)
+    p_q = tfd.SinhArcsinh(loc=mu_q, scale=sigma_q, skewness=skew_q)
+    
+    lnp = tf.math.log(r_q * p_q.prob(log10SFR) + (1-r_q) * p_sf.prob(log10SFR) + 1e-24)
+    
+    return lnp
 
 # volume redshift prior
 @tf.function
@@ -318,13 +363,13 @@ class ModelHMIIBaselinePrior:
 
 class ModelABBaselinePrior:
     
-    def __init__(self, baselineSFRprior=None, log10sSFRemulator=None, log10sSFRprior=None, log10sSFRuniformlimits=None, redshift_prior=None, FMRprior='gallazzi'):
+    def __init__(self, baselineSFRprior=None, log10sSFRemulator=None, log10sSFRuniformlimits=None, redshift_prior=None, FMRprior='gallazzi', SFSprior='leja', MFprior='leja'):
         
         # parameters and limits
         self.n_sps_parameters = 9
         self.parameter_names = ['N', 'log10Z', 'dust2', 'dust1_fraction', 'dust_index', 'log10alpha', 'log10beta', 'tau', 'z']
         self.lower = tf.constant([7., -1.98, 0., 0., -1., -1., -1., 0.007, 1e-5], dtype=tf.float32)
-        self.upper = tf.constant([13., 0.19, 4., 2., 0.4, 3., 3., 1., 2.5], dtype=tf.float32)
+        self.upper = tf.constant([13., 0.19, 4., 2., 0.4, 3., 3., 1., 2.0], dtype=tf.float32)
 
         # bijector from constrained parameter (physical) to unconstrained space for sampling. 
         # note: no bijector for the normalization parameter N (since it is already unconstrained)
@@ -340,12 +385,13 @@ class ModelABBaselinePrior:
         # star formation history parameters prior: import conditional density estimator model for P(SFH | z)
         self.baselineSFRprior = baselineSFRprior
         self.log10sSFRemulator = log10sSFRemulator
-        self.log10sSFRprior = log10sSFRprior
         self.log10sSFRuniformlimits = log10sSFRuniformlimits
 
         # extra priors
         self.redshift_prior = redshift_prior
         self.FMRprior = FMRprior
+        self.SFSprior = SFSprior
+        self.MFprior = MFprior
 
     #@tf.function
     def log_prob(self, latentparameters):
@@ -370,10 +416,12 @@ class ModelABBaselinePrior:
         logp = tf.reduce_sum(self.baselinePrior.log_prob(latentparameters[...,1:]), axis=-1, keepdims=True)
         
         # logmass prior
-        logp = logp + mass_function_log_prob(log10M, z) + self.massLimitsPrior.log_prob(log10M)
+        logp = logp + self.massLimitsPrior.log_prob(log10M)
+        if self.MFprior == 'leja':
+            logp = logp + mass_function_log_prob(log10M, z)
 
         # metallicity prior
-        if self.FMRprior is 'gallazzi':
+        if self.FMRprior == 'gallazzi':
         	logp = logp + metallicity_mass_log_prob(log10Z, log10M)
 
         # dust2 prior
@@ -389,14 +437,26 @@ class ModelABBaselinePrior:
         logp = tf.squeeze(logp, axis=-1)
 
         # SFH prior
-        if self.baselineSFRprior is not None:
+        if self.SFSprior is not None:
 
-            log10sSFR = tf.squeeze(self.log10sSFRemulator(sfh), -1)
-            baseline_SFR_prior_logprob = tf.squeeze(self.baselineSFRprior(tf.concat([tf.expand_dims(log10sSFR, -1), z], -1)), -1) # returns log prob
-            target_SFR_prior_logprob = self.log10sSFRprior(log10sSFR, tf.squeeze(z)) # returns log prob
-            uniform_SFR_limits = self.log10sSFRuniformlimits.log_prob(log10sSFR)
+            if self.SFSprior == 'mizuki':
 
-            logp = logp + target_SFR_prior_logprob - baseline_SFR_prior_logprob + uniform_SFR_limits
+                log10sSFR = tf.squeeze(self.log10sSFRemulator(sfh), -1)
+                baseline_SFR_prior_logprob = tf.squeeze(self.baselineSFRprior(tf.concat([tf.expand_dims(log10sSFR, -1), z], -1)), -1) # returns log prob
+                target_SFR_prior_logprob = log10sSFRpriorMizuki(log10sSFR, tf.squeeze(z)) # returns log prob
+                uniform_SFR_limits = self.log10sSFRuniformlimits.log_prob(log10sSFR)
+
+                logp = logp + target_SFR_prior_logprob - baseline_SFR_prior_logprob + uniform_SFR_limits
+
+            if self.SFSprior == 'leja':
+
+                log10sSFR = tf.squeeze(self.log10sSFRemulator(sfh), -1)
+                log10SFR = tf.squeeze(log10M) + log10sSFR
+                baseline_SFR_prior_logprob = tf.squeeze(self.baselineSFRprior(tf.concat([tf.expand_dims(log10sSFR, -1), z], -1)), -1) # returns log prob
+                target_SFR_prior_logprob = log10SFRpriorJoel(log10SFR, tf.squeeze(log10M), tf.squeeze(z)) # returns log prob
+                uniform_SFR_limits = self.log10sSFRuniformlimits.log_prob(log10sSFR)
+
+                logp = logp + target_SFR_prior_logprob - baseline_SFR_prior_logprob + uniform_SFR_limits
 
         if self.redshift_prior is not None:
             logp = logp + tf.squeeze(self.redshift_prior(z), -1)
