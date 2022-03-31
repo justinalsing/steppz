@@ -139,7 +139,7 @@ def curtiFMR(log10Z, log10M, log10sSFR):
 
 class ProspectorAlphaBaselinePrior:
     
-    def __init__(self, baselineSFRprior=None, log10sSFRemulator=None, log10sSFRprior=None, log10sSFRuniformlimits=None, redshift_prior=None):
+    def __init__(self, baselineSFRprior=None, log10sSFRemulator=None, log10sSFRuniformlimits=None, redshift_prior=None, SFSprior=None, FMRprior=None):
         
         # parameters and limits
         self.n_sps_parameters = 15
@@ -161,12 +161,13 @@ class ProspectorAlphaBaselinePrior:
         # star formation history parameters prior: import conditional density estimator model for P(SFH | z)
         self.baselineSFRprior = baselineSFRprior
         self.log10sSFRemulator = log10sSFRemulator
-        self.log10sSFRprior = log10sSFRprior
         self.log10sSFRuniformlimits = log10sSFRuniformlimits
 
         # redshift prior
         self.redshift_prior = redshift_prior
-        
+        self.SFSprior = SFSprior
+        self.FMRprior = FMRprior
+
     #@tf.function
     def log_prob(self, latentparameters):
         
@@ -219,15 +220,31 @@ class ProspectorAlphaBaselinePrior:
         # squeeze
         logp = tf.squeeze(logp, axis=-1)
 
-        # SFR prior
-        if self.baselineSFRprior is not None:
+        # SFH prior
+        if self.SFSprior is not None:
 
-            log10sSFR = tf.squeeze(self.log10sSFRemulator(sfh), -1)
-            baseline_SFR_prior_logprob = tf.squeeze(self.baselineSFRprior(tf.expand_dims(log10sSFR, -1)), -1) # returns log prob
-            target_SFR_prior_logprob = self.log10sSFRprior(log10sSFR, tf.squeeze(z)) # returns log prob
-            uniform_SFR_limits = self.log10sSFRuniformlimits.log_prob(log10sSFR)
+            if self.SFSprior == 'mizuki':
 
-            logp = logp + target_SFR_prior_logprob - baseline_SFR_prior_logprob + uniform_SFR_limits
+                log10sSFR = tf.squeeze(self.log10sSFRemulator(sfh), -1)
+                baseline_SFR_prior_logprob = tf.squeeze(self.baselineSFRprior(tf.expand_dims(log10sSFR, -1)), -1) # returns log prob
+                target_SFR_prior_logprob = log10sSFRpriorMizuki(log10sSFR, tf.squeeze(z)) # returns log prob
+                uniform_SFR_limits = self.log10sSFRuniformlimits.log_prob(log10sSFR)
+
+                logp = logp + target_SFR_prior_logprob - baseline_SFR_prior_logprob + uniform_SFR_limits
+
+            if self.SFSprior == 'leja':
+
+                log10sSFR = tf.squeeze(self.log10sSFRemulator(sfh), -1)
+                log10SFR = tf.squeeze(log10M) + log10sSFR
+                baseline_SFR_prior_logprob = tf.squeeze(self.baselineSFRprior(tf.expand_dims(log10sSFR, -1)), -1) # returns log prob
+                target_SFR_prior_logprob = log10SFRpriorJoel(log10SFR, tf.squeeze(log10M), tf.squeeze(z)) # returns log prob
+                uniform_SFR_limits = self.log10sSFRuniformlimits.log_prob(log10sSFR)
+
+                logp = logp + target_SFR_prior_logprob - baseline_SFR_prior_logprob + uniform_SFR_limits
+
+        if self.FMRprior == 'curti':
+            log10sSFR = self.log10sSFRemulator(sfh)
+            logp = logp + tf.squeeze(curtiFMR(gas_logz, log10M, log10sSFR), -1)
 
         # z prior
         if self.redshift_prior is not None:
