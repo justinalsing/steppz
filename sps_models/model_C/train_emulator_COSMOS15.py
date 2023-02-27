@@ -37,13 +37,17 @@ training_theta = tf.convert_to_tensor(training_theta)
 training_mag = tf.convert_to_tensor(training_mag)
 
 # filter names
-filters = ['ip_cosmos', 'v_cosmos', 'uvista_y_cosmos', 'r_cosmos', 'hsc_y',
-           'zpp', 'b_cosmos', 'uvista_h_cosmos', 'wircam_H', 'ia484_cosmos',
-           'ia527_cosmos', 'ia624_cosmos', 'ia679_cosmos', 'ia738_cosmos',
-           'ia767_cosmos', 'ia427_cosmos', 'ia464_cosmos', 'ia505_cosmos',
-           'ia574_cosmos', 'ia709_cosmos', 'ia827_cosmos', 'uvista_j_cosmos',
-           'uvista_ks_cosmos', 'wircam_Ks', 'NB711.SuprimeCam',
-           'NB816.SuprimeCam']
+filters = [
+   'galex_NUV', 'u_megaprime_sagem',
+   'hsc_g', 'hsc_r', 'hsc_i', 'hsc_z', 'hsc_y',
+   'uvista_y_cosmos', 'uvista_j_cosmos', 'uvista_h_cosmos', 'uvista_ks_cosmos',
+   'ia427_cosmos', 'ia464_cosmos', 'ia484_cosmos', 'ia505_cosmos', 'ia527_cosmos',
+   'ia574_cosmos', 'ia624_cosmos', 'ia679_cosmos', 'ia709_cosmos', 'ia738_cosmos',
+   'ia767_cosmos', 'ia827_cosmos',
+   'NB711.SuprimeCam', 'NB816.SuprimeCam',
+   'b_cosmos', 'v_cosmos', 'r_cosmos', 'ip_cosmos', 'zpp',
+   'irac1_cosmos', 'irac2_cosmos'
+]
 
 # filter range to run per stack
 # first = sys.argv[2]
